@@ -1,0 +1,52 @@
+JOHN DEVELOPER
+New York, NY | john.dev@email.com | linkedin.com/in/johndev | github.com/johndev
+
+PROFESSIONAL SUMMARY
+Full-stack software engineer with 5 years of experience building scalable web applications. Expertise in Python, JavaScript, and cloud infrastructure. Passionate about clean code and machine learning.
+
+EXPERIENCE
+
+Senior Software Engineer | TechCorp Inc. | Jan 2022 - Present
+- Led development of microservices architecture using FastAPI and Docker, reducing API response time by 40%
+- Implemented semantic search using BERT embeddings and Elasticsearch, improving search accuracy by 35%
+- Mentored 3 junior developers and conducted code reviews
+- Technologies: Python, FastAPI, PostgreSQL, Docker, AWS, React
+
+Software Engineer | DataFlow Systems | Jun 2020 - Dec 2021
+- Built data pipeline processing 10TB+ daily using Apache Spark and Python
+- Developed NLP text cleaning module using spaCy and NLTK
+- Implemented machine learning models for customer segmentation
+- Technologies: Python, Spark, SQL, Machine Learning, spaCy
+
+Junior Developer | StartupXYZ | Jan 2019 - May 2020
+- Built REST APIs using Node.js and Express.js
+- Developed responsive React components for web dashboard
+- Implemented JWT authentication and API security
+- Technologies: JavaScript, Node.js, React, MongoDB, REST APIs
+
+EDUCATION
+B.S. in Computer Science | State University | 2018
+
+SKILLS
+Programming Languages: Python, JavaScript, SQL, Java
+Web Frameworks: FastAPI, Django, Express.js, React
+Machine Learning: TensorFlow, scikit-learn, BERT, NLP, Embeddings
+Databases: PostgreSQL, MongoDB, Elasticsearch
+Cloud & DevOps: AWS, Docker, Kubernetes, CI/CD
+Other: Git, RESTful APIs, Microservices, Agile, Semantic Search
+
+PROJECTS
+Resume-AI Analyzer | Personal Project | 2024
+- Built semantic resume analysis system using Python, Sentence Transformers, and Groq LLM
+- Extracts text from PDFs, generates embeddings, performs semantic matching
+- Provides AI-powered career roadmap using generative AI
+- Technologies: Python, FastAPI, React, Groq API, Sentence Transformers
+
+Portfolio Website | Personal | 2023
+- Developed full-stack portfolio using Next.js and Node.js
+- Implemented dark mode, responsive design, and SEO optimization
+- Technologies: Next.js, Node.js, Tailwind CSS
+
+CERTIFICATIONS
+- AWS Certified Solutions Architect Associate (2022)
+- Google Cloud Professional Data Engineer (2021)

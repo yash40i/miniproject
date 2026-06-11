@@ -1,0 +1,42 @@
+{
+  "match_score": 70.6039047241211,
+  "matched_skills_count": 10,
+  "missing_skills_count": 14,
+  "top_matches": [
+    {
+      "resume": "kubernetes",
+      "job": "kubernetes",
+      "similarity": 1.0
+    },
+    {
+      "resume": "google cloud (bigquery",
+      "job": "bigquery",
+      "similarity": 0.7360442280769348
+    },
+    {
+      "resume": "bash machine learning: tensorflow",
+      "job": "tensorflow",
+      "similarity": 0.7147314548492432
+    },
+    {
+      "resume": "structured query language",
+      "job": "vertex artificial intelligence) \u00e2\u20ac\u00a2 data: structured query language",
+      "similarity": 0.7101588249206543
+    },
+    {
+      "resume": "pytorch",
+      "job": "8+ \u00e2\u20ac\u00a2 machine learning frameworks: pytorch",
+      "similarity": 0.6882774829864502
+    }
+  ],
+  "missing_skills_sample": [
+    "or azure) \u00e2\u20ac\u00a2 solid understanding of data structures",
+    "algorithms",
+    "and system design \u00e2\u20ac\u00a2 experience with application programming interface design",
+    "representational state transfer",
+    "mathematics",
+    "sagemaker",
+    "s3)",
+    "weights & biases"
+  ]
+}

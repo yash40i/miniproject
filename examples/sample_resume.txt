@@ -1,0 +1,54 @@
+John Anderson
+Senior Data Scientist | ML Engineer | Python Expert
+Email: john.anderson@email.com | Phone: (555) 123-4567
+LinkedIn: linkedin.com/in/johnanderson
+
+PROFESSIONAL SUMMARY
+Experienced ML engineer with 6 years of expertise in building production-grade machine learning systems. Strong background in Python, deep learning, and cloud deployment. Proven track record of developing and scaling data pipelines that process millions of data points.
+
+CORE SKILLS
+Programming: Python, JavaScript, SQL, Bash
+Machine Learning: TensorFlow, PyTorch, Scikit-learn, XGBoost
+NLP & AI: BERT, spaCy, LLMs, Hugging Face Transformers
+Data Processing: Pandas, NumPy, Apache Spark, Dask
+Cloud: AWS (EC2, S3, Lambda), Google Cloud (BigQuery, AI Platform)
+DevOps: Docker, Kubernetes, CI/CD, GitHub Actions
+Visualization: Matplotlib, Plotly, Tableau
+Databases: PostgreSQL, MongoDB, Redis
+
+PROFESSIONAL EXPERIENCE
+
+Senior ML Engineer | TechCorp AI Solutions | 2021 - Present
+• Led development of real-time recommendation engine processing 50M+ daily events
+• Trained BERT-based NLP models for sentiment analysis (95% F1 score)
+• Architected data pipeline using Apache Spark reducing inference latency by 40%
+• Mentored 3 junior engineers in ML best practices and code review
+• Deployed 5 production models to AWS using Docker and Kubernetes
+
+Data Scientist | DataFlow Inc | 2019 - 2021
+• Built predictive models for customer churn (87% AUC-ROC score)
+• Created automated ETL pipelines processing 500GB+ daily data
+• Implemented A/B testing framework resulting in 15% revenue increase
+• Developed time-series forecasting models for demand prediction
+
+ML Engineer Intern | StartupAI | 2018 - 2019
+• Built image classification pipeline using CNN and PyTorch
+• Optimized model inference using TensorFlow Lite for mobile deployment
+• Contributed to open-source ML libraries
+
+EDUCATION
+M.S. Computer Science (AI/ML Specialization) | State University | 2018
+B.S. Computer Science | State University | 2016
+
+PROJECTS & PUBLICATIONS
+• Published "Efficient Transformer Fine-tuning for Production NLP" (arxiv.org, 2023)
+• Open-source: PyTensor - Pytorch utility library (2.5K GitHub stars)
+• Computer Vision project: Real-time object detection using YOLO v5
+
+CERTIFICATIONS
+• AWS Certified Machine Learning Specialist
+• Google Cloud Professional Data Engineer
+• TensorFlow Advanced Specialization
+
+LANGUAGES
+English (Native), Spanish (Fluent), Mandarin (Basic)

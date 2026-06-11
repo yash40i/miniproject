@@ -1,0 +1,32 @@
+# Python Dependencies for Resume-Insight AI
+
+# Core PDF Processing
+PyMuPDF>=1.23.0          # PDF parsing with multi-column support
+
+# NLP and Text Processing
+spacy>=3.7.0             # Advanced NLP pipeline
+NLTK>=3.8.0              # Additional text processing
+sentence-transformers>=2.2.0  # Semantic embeddings
+
+# ML and Scientific Computing
+numpy>=1.24.0            # Numerical operations
+scikit-learn>=1.3.0      # Machine learning utilities
+
+# LLM API Clients (choose what you need)
+openai>=1.0.0            # OpenAI API
+groq>=0.4.0              # Groq API
+google-generativeai>=0.3.0  # Google Gemini
+
+# Utilities
+python-dotenv>=1.0.0     # Environment variable management
+pydantic>=2.0.0          # Data validation
+
+# Development & Testing (optional)
+pytest>=7.4.0            # Testing framework
+pytest-cov>=4.1.0        # Code coverage
+black>=23.0.0            # Code formatting
+flake8>=6.0.0            # Linting
+
+# Optional GPU Support (uncomment if using CUDA)
+# torch>=2.0.0+cu118     # PyTorch with CUDA support
+# tensorflow-gpu>=2.13.0 # TensorFlow GPU support

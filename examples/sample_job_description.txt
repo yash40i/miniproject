@@ -1,0 +1,57 @@
+Senior Machine Learning Engineer - Job Description
+
+Company: VentureTech Solutions
+Location: San Francisco, CA / Remote
+Employment Type: Full-time
+Experience Level: Senior (5+ years)
+
+JOB SUMMARY
+We are seeking an exceptional Senior Machine Learning Engineer to join our AI/ML platform team. You will architect and deploy large-scale machine learning systems that power our next-generation products for enterprise customers worldwide.
+
+REQUIRED QUALIFICATIONS
+• 5+ years of professional experience developing and deploying ML models in production
+• Advanced proficiency in Python and modern ML frameworks (TensorFlow or PyTorch)
+• Strong expertise in Natural Language Processing and large language model fine-tuning
+• Proven experience with cloud platforms (AWS, GCP, or Azure)
+• Solid understanding of data structures, algorithms, and system design
+• Experience with API design, REST, and microservices architecture
+• Strong communication skills and ability to work cross-functionally with product and engineering teams
+
+PREFERRED QUALIFICATIONS
+• Experience with Kubernetes and containerized deployment (Docker)
+• Knowledge of distributed computing frameworks (Spark, Ray)
+• Experience with MLOps practices and model monitoring
+• Contribution to open-source ML projects
+• Advanced SQL and database optimization skills
+• Experience with computer vision or recommendation systems
+• Master's degree in Computer Science, Mathematics, or related field
+
+KEY RESPONSIBILITIES
+• Design and implement scalable ML pipelines processing billions of data points
+• Develop and fine-tune deep learning models for production deployment
+• Own end-to-end ML model lifecycle from experimentation to production monitoring
+• Collaborate with data engineers to build robust data infrastructure
+• Conduct code reviews and mentor junior ML engineers
+• Research and implement state-of-the-art ML techniques
+• Optimize model performance for latency and accuracy trade-offs
+• Establish best practices for ML development and deployment
+
+TECHNICAL STACK
+• Languages: Python 3.8+
+• ML Frameworks: PyTorch, TensorFlow, JAX
+• Platforms: AWS (EC2, SageMaker, S3), or GCP (Compute Engine, Vertex AI)
+• Data: SQL, BigQuery, Spark
+• DevOps: Docker, Kubernetes, CI/CD pipelines
+• Monitoring: MLflow, Weights & Biases, DataDog
+
+COMPENSATION & BENEFITS
+• Competitive salary: $180K - $240K based on experience
+• Equity package
+• Comprehensive health insurance
+• 401(k) matching
+• Professional development budget
+• Flexible remote work policy
+• 4 weeks PTO
+
+COMPANY CULTURE
+VentureTech Solutions is a fast-growing AI-first company backed by leading VCs. We value innovation, collaboration, and continuous learning. Our team is diverse, inclusive, and committed to building AI responsibly.

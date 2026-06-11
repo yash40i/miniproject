@@ -1,0 +1,24 @@
+{
+  "buildCommand": "cd frontend && npm run build",
+  "outputDirectory": "frontend/.next",
+  "installCommand": "cd frontend && npm ci",
+  "env": {
+    "NEXT_PUBLIC_API_URL": {
+      "description": "Backend API URL"
+    },
+    "NEXT_PUBLIC_GOOGLE_CLIENT_ID": {
+      "description": "Google OAuth Client ID"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/auth/:path*",
+      "destination": "${NEXT_PUBLIC_API_URL}/auth/:path*"
+    }
+  ],
+  "functions": {
+    "frontend/app/**": {
+      "maxDuration": 60
+    }
+  }
+}

@@ -1,0 +1,52 @@
+Senior Machine Learning Engineer
+
+Location: New York, NY (Hybrid)
+Salary: $180k - $220k + equity
+
+About the Role:
+We are seeking a Senior Machine Learning Engineer to lead our AI/ML initiatives. You will work on building next-generation AI products that serve millions of users globally.
+
+Responsibilities:
+- Design and implement machine learning pipelines for large-scale data processing
+- Develop and optimize deep learning models using TensorFlow and PyTorch
+- Build recommendation systems using collaborative filtering and embeddings
+- Work with NLP tasks including text classification, named entity recognition, and semantic search
+- Implement distributed training systems and model serving infrastructure
+- Collaborate with product teams to translate business requirements into ML solutions
+- Mentor junior ML engineers and conduct technical interviews
+
+Required Qualifications:
+- 5+ years of experience in machine learning and data science
+- Strong expertise in Python and SQL
+- Deep knowledge of TensorFlow, PyTorch, or similar ML frameworks
+- Experience with NLP and deep learning
+- Proficiency with cloud platforms (AWS, GCP, or Azure)
+- Understanding of microservices architecture and containerization (Docker, Kubernetes)
+- Strong software engineering practices (Git, CI/CD, testing)
+- Experience with distributed computing (Spark, Ray) is a plus
+- Knowledge of recommendation systems and embeddings
+
+Nice to Have:
+- Experience with generative AI and large language models
+- Published research papers in ML/AI
+- Experience with vector databases and semantic search
+- Knowledge of MLOps and model monitoring
+- Open source contributions
+- Experience with feature stores
+
+Requirements:
+- BS/MS in Computer Science, Mathematics, or related field (or equivalent experience)
+- Strong problem-solving skills and ability to work independently
+- Excellent communication and collaboration skills
+- Passion for staying current with ML/AI developments
+
+Benefits:
+- Competitive salary and equity package
+- Health insurance (medical, dental, vision)
+- 401(k) with matching
+- Professional development budget
+- Remote work flexibility
+- Collaborative team environment
+
+About Us:
+TechAI Solutions is a fast-growing AI company building intelligent solutions for enterprise customers. Our platform processes billions of data points daily and serves customers in 50+ countries.
