@@ -12,6 +12,9 @@ RUN apt-get update && apt-get install -y \
 # Copy requirements.txt from backend/ (context = repo root)
 COPY backend/requirements.txt .
 
+# Install PyTorch CPU version first to prevent downloading the massive 2.5GB CUDA version
+RUN pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+
 # Install core server dependencies first
 RUN pip install --no-cache-dir \
     fastapi \
@@ -31,7 +34,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN python -m spacy download en_core_web_sm
 
 # Download NLTK data
-RUN python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords')"
+RUN python -c "import nltk; nltk.download('punkt'); nltk.download('punkt_tab'); nltk.download('stopwords')"
 
 # Copy application code from backend/ (context = repo root)
 COPY backend/src /app/src
