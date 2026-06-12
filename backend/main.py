@@ -15,6 +15,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 import uuid
 import json
+import os
 from pathlib import Path
 import tempfile
 import logging
@@ -65,9 +66,18 @@ origins = [
     "http://127.0.0.1:8000",
 ]
 
+# Read CORS origins from environment
+cors_origins_str = os.getenv("CORS_ORIGINS")
+if cors_origins_str:
+    for origin in cors_origins_str.split(","):
+        origin = origin.strip()
+        if origin and origin not in origins:
+            origins.append(origin)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
