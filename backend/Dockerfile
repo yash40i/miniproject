@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y \
 
 # Copy requirements (if using a requirements.txt)
 # For now, we'll install packages that match our pipeline setup
-COPY requirements.txt .
+COPY backend/requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir \
@@ -36,8 +36,8 @@ RUN python -m spacy download en_core_web_sm
 RUN python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords')"
 
 # Copy application code
-COPY src /app/src
-COPY main.py /app/main.py
+COPY backend/src /app/src
+COPY backend/main.py /app/main.py
 
 # Expose port
 EXPOSE 8000
