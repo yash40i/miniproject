@@ -1,6 +1,7 @@
 import axios, { AxiosInstance } from "axios";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+// API_URL is used by Next.js rewrites (next.config.ts) to forward requests server-side.
+// The browser always calls relative paths (/api/...) — never Railway directly — to avoid CORS.
 const TOKEN_KEY = "auth_token";
 
 // Auth Interfaces
@@ -67,8 +68,9 @@ class APIClient {
   private client: AxiosInstance;
 
   constructor() {
+    // No baseURL — all requests use relative paths so Next.js proxy forwards them to Railway.
+    // This prevents CORS errors since the browser never contacts Railway directly.
     this.client = axios.create({
-      baseURL: API_URL,
       timeout: 240000,
     });
 
@@ -109,7 +111,7 @@ class APIClient {
     fullName?: string
   ): Promise<AuthToken> {
     try {
-      const response = await axios.post("/api/auth/signup", {
+      const response = await this.client.post("/api/auth/signup", {
         email,
         password,
         full_name: fullName,
@@ -124,7 +126,7 @@ class APIClient {
 
   async login(email: string, password: string): Promise<AuthToken> {
     try {
-      const response = await axios.post("/api/auth/login", {
+      const response = await this.client.post("/api/auth/login", {
         email,
         password,
       });
@@ -138,10 +140,7 @@ class APIClient {
 
   async getCurrentUser(): Promise<User> {
     try {
-      const token = this.getToken();
-      const response = await axios.get("/api/auth/me", {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const response = await this.client.get("/api/auth/me");
       return response.data;
     } catch (error) {
       throw this.handleError(error);

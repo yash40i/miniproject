@@ -64,9 +64,11 @@ origins = [
     "http://127.0.0.1:3005",
     "http://127.0.0.1:3006",
     "http://127.0.0.1:8000",
+    # Production Vercel frontend
+    "https://miniproject103qwertyu.vercel.app",
 ]
 
-# Read CORS origins from environment
+# Read CORS origins from environment (e.g. CORS_ORIGINS=https://your-app.vercel.app)
 cors_origins_str = os.getenv("CORS_ORIGINS")
 if cors_origins_str:
     for origin in cors_origins_str.split(","):
@@ -77,11 +79,12 @@ if cors_origins_str:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_origin_regex=r"https://.*\.(vercel\.app|railway\.app)",
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
 
 
 # Security scheme
