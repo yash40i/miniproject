@@ -2,6 +2,7 @@
 
 # Core PDF Processing
 PyMuPDF>=1.23.0          # PDF parsing with multi-column support
+PyPDF2>=3.0.0            # PDF reading (used in background tasks)
 
 # NLP and Text Processing
 spacy>=3.7.0             # Advanced NLP pipeline
@@ -12,6 +13,13 @@ sentence-transformers>=2.2.0  # Semantic embeddings
 numpy>=1.24.0            # Numerical operations
 scikit-learn>=1.3.0      # Machine learning utilities
 
+# Database
+sqlalchemy>=2.0.0        # ORM for SQLite/PostgreSQL
+
+# Authentication
+python-jose[cryptography]>=3.3.0  # JWT token generation/verification
+passlib[bcrypt]>=1.7.4   # Password hashing with bcrypt
+
 # LLM API Clients (choose what you need)
 openai>=1.0.0            # OpenAI API
 groq>=0.4.0              # Groq API
@@ -20,6 +28,7 @@ google-generativeai>=0.3.0  # Google Gemini
 # Utilities
 python-dotenv>=1.0.0     # Environment variable management
 pydantic>=2.0.0          # Data validation
+aiofiles>=23.0.0         # Async file handling
 
 # Development & Testing (optional)
 pytest>=7.4.0            # Testing framework

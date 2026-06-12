@@ -2,12 +2,6 @@
   "buildCommand": "npm run build",
   "outputDirectory": ".next",
   "installCommand": "npm ci",
-  "rewrites": [
-    {
-      "source": "/api/auth/:path*",
-      "destination": "${NEXT_PUBLIC_API_URL}/auth/:path*"
-    }
-  ],
   "functions": {
     "app/**": {
       "maxDuration": 60
