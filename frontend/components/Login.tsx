@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/useAuth";
 import { validateLoginForm, getFieldError } from "@/lib/validation";
-import { Mail, Lock, Loader, Eye, EyeOff, Chrome, ArrowRight } from "lucide-react";
+import { Mail, Lock, Loader, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 
@@ -20,7 +20,7 @@ export default function LoginForm() {
   const [errors, setErrors] = useState<any[]>([]);
   const [apiError, setApiError] = useState("");
   const [isHovered, setIsHovered] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
 
   const from = searchParams.get("from") || "/";
 
@@ -48,7 +48,6 @@ export default function LoginForm() {
 
   const handleGoogleSuccess = async (credentialResponse: any) => {
     try {
-      setIsGoogleLoading(true);
       setApiError("");
 
       // Decode JWT token to get user info
@@ -84,7 +83,6 @@ export default function LoginForm() {
         err instanceof Error ? err.message : "Google login failed. Please try again."
       );
     } finally {
-      setIsGoogleLoading(false);
     }
   };
 
@@ -141,7 +139,7 @@ export default function LoginForm() {
                 <GoogleLogin
                   onSuccess={handleGoogleSuccess}
                   onError={handleGoogleError}
-                  theme="dark"
+                  theme="filled_black"
                   size="large"
                   width="100%"
                 />

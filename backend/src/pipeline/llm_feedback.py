@@ -65,14 +65,14 @@ class LLMFeedbackGenerator:
         if provider == "openai":
             try:
                 from openai import OpenAI
-                return OpenAI(api_key=self.config.api_key)
+                return OpenAI(api_key=self.config.api_key, timeout=240.0)
             except ImportError:
                 raise ImportError("Install openai: pip install openai")
         
         elif provider == "groq":
             try:
                 from groq import Groq
-                return Groq(api_key=self.config.api_key)
+                return Groq(api_key=self.config.api_key, timeout=240.0)
             except ImportError:
                 raise ImportError("Install groq: pip install groq")
         

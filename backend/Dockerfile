@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y \
 
 # Copy requirements (if using a requirements.txt)
 # For now, we'll install packages that match our pipeline setup
-COPY requirements.txt . 2>/dev/null || echo "No requirements.txt, will install manually"
+COPY requirements.txt . 2>/dev/null ||echo "No requirements.txt, will install manually"
 
 # Install Python dependencies
 RUN pip install --no-cache-dir \
@@ -37,7 +37,7 @@ RUN python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords')"
 
 # Copy application code
 COPY src /app/src
-COPY backend /app/backend
+COPY main.py /app/main.py
 
 # Expose port
 EXPOSE 8000
@@ -47,4 +47,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
   CMD python -c "import requests; requests.get('http://localhost:8000/health')" || exit 1
 
 # Run application
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

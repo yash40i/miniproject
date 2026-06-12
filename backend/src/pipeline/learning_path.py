@@ -619,10 +619,10 @@ class LearningPathGenerator:
         try:
             if provider == "groq":
                 from groq import Groq
-                self.llm_client = Groq(api_key=self.config.api_key)
+                self.llm_client = Groq(api_key=self.config.api_key, timeout=240.0)
             elif provider == "openai":
                 from openai import OpenAI
-                self.llm_client = OpenAI(api_key=self.config.api_key)
+                self.llm_client = OpenAI(api_key=self.config.api_key, timeout=240.0)
         except ImportError as e:
             print(f"Warning: Could not initialize {provider} client: {e}")
             self.llm_client = None
@@ -631,7 +631,9 @@ class LearningPathGenerator:
         self,
         feedback: FeedbackResult,
         priority_skills: List[str],
-        weeks_available: int = 12
+        weeks_available: int = 12,
+        resume_text: Optional[str] = None,
+        job_description: Optional[str] = None
     ) -> LearningPath:
         """
         Generate a complete learning path.
@@ -640,6 +642,8 @@ class LearningPathGenerator:
             feedback: FeedbackResult from LLM
             priority_skills: List of priority skills to focus on
             weeks_available: Time frame for learning (default 12 weeks)
+            resume_text: Optional candidate resume text
+            job_description: Optional job description text
             
         Returns:
             LearningPath object
@@ -653,7 +657,9 @@ class LearningPathGenerator:
             milestone = self._create_milestone(
                 skill_name=skill,
                 milestone_id=idx + 1,
-                difficulty=self._estimate_difficulty(skill)
+                difficulty=self._estimate_difficulty(skill),
+                resume_text=resume_text,
+                job_description=job_description
             )
             milestones.append(milestone)
             total_hours += milestone.estimated_hours
@@ -686,7 +692,9 @@ class LearningPathGenerator:
         self,
         skill_name: str,
         milestone_id: int,
-        difficulty: str
+        difficulty: str,
+        resume_text: Optional[str] = None,
+        job_description: Optional[str] = None
     ) -> Milestone:
         """
         Create a single learning milestone.
@@ -695,13 +703,20 @@ class LearningPathGenerator:
             skill_name: Name of the skill
             milestone_id: Unique milestone ID
             difficulty: Difficulty level
+            resume_text: Optional candidate resume text
+            job_description: Optional job description text
             
         Returns:
             Milestone object
         """
         
         # Get resources for this skill (filtered by difficulty)
-        resources = self._get_skill_resources(skill_name, difficulty)
+        resources = self._get_skill_resources(
+            skill_name,
+            difficulty,
+            resume_text=resume_text,
+            job_description=job_description
+        )
         
         # Calculate estimated hours from resources
         estimated_hours = sum(r.get("hours", 20) for r in resources[:3])
@@ -729,17 +744,117 @@ class LearningPathGenerator:
         
         return milestone
     
-    def _get_skill_resources(self, skill_name: str, difficulty: str = None) -> List[Dict[str, str]]:
+    def _get_skill_resources_with_llm(
+        self,
+        skill_name: str,
+        difficulty: str = "beginner",
+        resume_text: Optional[str] = None,
+        job_description: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Generate high-quality online courses/resources using Groq API."""
+        if not self.llm_client:
+            return []
+            
+        difficulty = difficulty or "beginner"
+        
+        prompt = f"""
+You are an expert technical career advisor and educator. Your task is to recommend exactly 3 high-quality online courses, tutorials, or official documentations to help a learner master the skill "{skill_name}" at the "{difficulty}" level.
+
+{f'The learner is targeting this job description: {job_description[:300]}...' if job_description else ''}
+{f'The learner\'s resume context: {resume_text[:300]}...' if resume_text else ''}
+
+For each of the 3 recommended resources, you MUST provide:
+1. title: The actual name of the course or tutorial (e.g. "React - The Complete Guide (Academind)")
+2. url: A real, valid web link (or high-quality search link on platforms like Udemy, Coursera, FreeCodeCamp, Pluralsight, or official docs, e.g. "https://www.coursera.org/search?query=react")
+3. type: The resource type (one of: "Course", "Tutorial", "Official Docs", "Practice", "Hands-on Lab")
+4. hours: Estimated number of hours to complete (as an integer, e.g., 20)
+5. difficulty: "{difficulty}"
+6. free: A boolean (true if free, false if paid)
+
+Response Format:
+You must return ONLY a JSON array containing the 3 objects, with no markdown code block formatting, no extra explanation text, and no wrapper. Example:
+[
+  {{
+    "title": "React Official Documentation",
+    "url": "https://react.dev",
+    "type": "Official Docs",
+    "hours": 10,
+    "difficulty": "{difficulty}",
+    "free": true
+  }}
+]
+"""
+        try:
+            response = self.llm_client.chat.completions.create(
+                model=self.config.model if self.config else "llama-3.1-8b-instant",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.5,
+                max_tokens=500,
+            )
+            content = response.choices[0].message.content.strip()
+            
+            # Clean up potential markdown formatting (e.g. ```json ... ```)
+            if content.startswith("```"):
+                lines = content.split("\n")
+                if lines[0].startswith("```"):
+                    lines = lines[1:]
+                if lines[-1].startswith("```"):
+                    lines = lines[:-1]
+                content = "\n".join(lines).strip()
+                
+            resources = json.loads(content)
+            if isinstance(resources, list) and len(resources) > 0:
+                # Ensure all elements have required keys
+                validated_resources = []
+                for res in resources[:4]:
+                    if isinstance(res, dict) and "title" in res and "url" in res:
+                        validated_resources.append({
+                            "title": str(res.get("title")),
+                            "url": str(res.get("url")),
+                            "type": str(res.get("type", "Course")),
+                            "hours": int(res.get("hours", 20)),
+                            "difficulty": str(res.get("difficulty", difficulty)),
+                            "free": bool(res.get("free", True))
+                        })
+                if validated_resources:
+                    print(f"DEBUG: Successfully generated dynamic resources for {skill_name} via Groq!")
+                    return validated_resources
+        except Exception as e:
+            print(f"Error generating resources via LLM: {e}")
+            
+        return []
+
+    def _get_skill_resources(
+        self,
+        skill_name: str,
+        difficulty: str = None,
+        resume_text: Optional[str] = None,
+        job_description: Optional[str] = None
+    ) -> List[Dict[str, str]]:
         """
         Get curated resources for a skill, filtered by difficulty if specified.
+        If LLM is available, use dynamic Groq recommendations.
         
         Args:
             skill_name: Name of the skill
             difficulty: Optional difficulty level to filter by
+            resume_text: Optional candidate resume text
+            job_description: Optional job description text
             
         Returns:
             List of resource dictionaries with title, URL, type, hours, free flag
         """
+        # Try dynamic LLM recommendations first
+        if self.llm_client:
+            llm_resources = self._get_skill_resources_with_llm(
+                skill_name,
+                difficulty,
+                resume_text=resume_text,
+                job_description=job_description
+            )
+            if llm_resources:
+                return llm_resources
+
         if skill_name in self.RESOURCE_DATABASE:
             resources = self.RESOURCE_DATABASE[skill_name]
             

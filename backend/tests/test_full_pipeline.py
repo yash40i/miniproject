@@ -29,7 +29,7 @@ try:
     print()
     
     if result.feedback_result:
-        print('✅ GROQ LLM FEEDBACK GENERATED!')
+        print('[OK] GROQ LLM FEEDBACK GENERATED!')
         print()
         print('Gap Analysis:')
         print(result.feedback_result.gap_analysis[:300])
@@ -46,7 +46,7 @@ try:
         print(f'  Milestones: {len(result.learning_path.milestones)} items')
     
     print()
-    print('✅ COMPLETE PIPELINE WORKING END-TO-END!')
+    print('[OK] COMPLETE PIPELINE WORKING END-TO-END!')
     print('   All 6 stages executed successfully:')
     print('   [1] PDF Parse [2] NLP Clean [3] Job Clean')
     print('   [4] Semantic Match [5] Groq LLM [6] Learning Path')

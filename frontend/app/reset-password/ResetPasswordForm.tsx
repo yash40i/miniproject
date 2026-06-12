@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/useAuth";
 import {
@@ -14,7 +14,7 @@ import { Lock, Loader, Eye, EyeOff, Check, X, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function ResetPasswordForm() {
-  const router = useRouter();
+
   const searchParams = useSearchParams();
   const { resetPassword, verifyResetToken, isLoading } = useAuth();
 

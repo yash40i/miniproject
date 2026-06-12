@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useEffect, useState } from "react";
-import { apiClient, User, AuthToken } from "./api";
+import { apiClient, User } from "./api";
 import { toast } from "react-toastify";
 
 export interface AuthContextType {

@@ -4,10 +4,11 @@ Identifies conceptual matches between resume and job description using cosine si
 """
 
 import numpy as np
-from typing import List, Tuple, Dict
+import json
+from typing import List, Tuple, Dict, Optional, Any
 from dataclasses import dataclass
 
-from src.config.config import SemanticMatchingConfig
+from src.config.config import SemanticMatchingConfig, LLMConfig
 from src.pipeline.embeddings import EmbeddingGenerator
 
 
@@ -36,15 +37,36 @@ class SemanticMatcher:
     Identifies conceptual synonyms and calculates matching scores.
     """
     
-    def __init__(self, config: SemanticMatchingConfig = None):
+    def __init__(self, config: SemanticMatchingConfig = None, llm_config: Optional[LLMConfig] = None):
         """
         Initialize semantic matcher.
         
         Args:
             config: SemanticMatchingConfig object
+            llm_config: Optional LLMConfig for skill extraction
         """
         self.config = config or SemanticMatchingConfig()
+        self.llm_config = llm_config
         self.embedding_gen = EmbeddingGenerator()
+        
+        self.llm_client = None
+        if self.llm_config:
+            self._initialize_llm_client()
+            
+    def _initialize_llm_client(self):
+        """Initialize LLM client for skill extraction."""
+        if not self.llm_config:
+            return
+        provider = self.llm_config.provider.lower()
+        try:
+            if provider == "groq":
+                from groq import Groq
+                self.llm_client = Groq(api_key=self.llm_config.api_key, timeout=240.0)
+            elif provider == "openai":
+                from openai import OpenAI
+                self.llm_client = OpenAI(api_key=self.llm_config.api_key, timeout=240.0)
+        except Exception as e:
+            print(f"Warning: Could not initialize LLM client in SemanticMatcher: {e}")
     
     def match(
         self,
@@ -62,8 +84,8 @@ class SemanticMatcher:
             MatchingResult with scores and matches
         """
         # Extract and chunk text into skills/concepts
-        resume_chunks = self._extract_chunks(resume_text)
-        job_chunks = self._extract_chunks(job_description)
+        resume_chunks = self._extract_chunks(resume_text, is_job=False)
+        job_chunks = self._extract_chunks(job_description, is_job=True)
         
         # Generate embeddings
         resume_embeddings = self.embedding_gen.embed(resume_chunks)
@@ -116,19 +138,69 @@ class SemanticMatcher:
             }
         )
     
-    def _extract_chunks(self, text: str) -> List[str]:
+    def _extract_chunks_with_llm(self, text: str, is_job: bool) -> List[str]:
+        """Extract high-quality list of skills using Groq/OpenAI."""
+        if not self.llm_client:
+            return []
+            
+        role = "job description" if is_job else "resume"
+        prompt = f"""
+You are an expert technical recruiter. Analyze the following {role} text and extract a clean list of concrete technical skills, programming languages, tools, architectures, and professional competencies.
+Do NOT extract general sentences, filler text, or corporate fluff (e.g. do NOT extract "our clients' needs are constantly evolving", "we focus on professional development", "talented individuals").
+Only extract specific, recognizable skills (e.g. "Python", "Docker", "Machine Learning", "Software Engineering", "AWS", "Communication").
+
+Text:
+{text}
+
+Response Format:
+You MUST return ONLY a JSON list of strings, with no markdown code blocks, no additional explanation, and no extra characters:
+["Skill 1", "Skill 2", "Skill 3"]
+"""
+        try:
+            response = self.llm_client.chat.completions.create(
+                model=self.llm_config.model or "llama-3.1-8b-instant",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.3,
+                max_tokens=400,
+            )
+            content = response.choices[0].message.content.strip()
+            
+            if content.startswith("```"):
+                lines = content.split("\n")
+                if lines[0].startswith("```"):
+                    lines = lines[1:]
+                if lines[-1].startswith("```"):
+                    lines = lines[:-1]
+                content = "\n".join(lines).strip()
+                
+            skills = json.loads(content)
+            if isinstance(skills, list):
+                result = [str(s).strip() for s in skills if s and str(s).strip()]
+                print(f"DEBUG: Successfully extracted {len(result)} skills from {role} via Groq!")
+                return result
+        except Exception as e:
+            print(f"Error extracting skills using LLM: {e}")
+            
+        return []
+
+    def _extract_chunks(self, text: str, is_job: bool = False) -> List[str]:
         """
-        Extract skill-like chunks from text using simple heuristics.
+        Extract skill-like chunks from text.
+        If LLM is available, use LLM for precise skill extraction.
         
         Args:
             text: Input text
+            is_job: Boolean flag indicating if text is from a job description
             
         Returns:
             List of extracted chunks
         """
-        # Simple extraction: split by periods, commas, semicolons
-        # In production, use more sophisticated methods (spaCy, noun extraction)
-        
+        if self.llm_client:
+            llm_skills = self._extract_chunks_with_llm(text, is_job)
+            if llm_skills:
+                return llm_skills
+
+        # Heuristic fallback if LLM is unavailable or fails
         text = text.replace('\n', ' ')
         
         # Split by common delimiters

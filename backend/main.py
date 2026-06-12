@@ -4,6 +4,9 @@ Exposes the ML pipeline as REST API endpoints
 With persistent PostgreSQL/SQLite database support
 """
 
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks, Form, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -848,12 +851,103 @@ async def analyze_text_resume(
     )
     db.add(db_analysis)
     db.commit()
-    
     return {
         "analysis_id": analysis_id,
         "status": "pending",
         "message": "Text analysis endpoint - coming soon"
     }
+
+
+class CourseRecommendationRequest(BaseModel):
+    """Request model for course recommendations directly from a job description"""
+    job_description: str
+    experience_level: Optional[str] = "intermediate"  # beginner, intermediate, advanced
+
+
+@app.post("/api/recommend-courses")
+async def recommend_courses_for_job(request: CourseRecommendationRequest):
+    """
+    Recommend courses directly based on a job description using Groq LLM.
+    Identifies key skills required and lists courses for each skill.
+    """
+    try:
+        # Load Groq API Key and Config
+        llm_config = LLMConfig()
+        if not llm_config.api_key:
+            raise HTTPException(status_code=500, detail="Groq API key not configured")
+        
+        # Initialize Groq client
+        from groq import Groq
+        client = Groq(api_key=llm_config.api_key, timeout=240.0)
+        
+        prompt = f"""
+You are an expert technical recruiter and career coach.
+Analyze the following job description and identify the top 4 key technical skills required to land this job.
+For each skill, recommend exactly 3 high-quality online courses, tutorials, or official documentations for a learner at the "{request.experience_level}" level.
+
+Job Description:
+\"\"\"{request.job_description}\"\"\"
+
+For each course, provide:
+1. title: Course name
+2. platform: Course host/creator (e.g. Coursera, Udemy, FreeCodeCamp, Pluralsight, official docs)
+3. url: A realistic, search or direct link on the platform (e.g., "https://www.coursera.org/search?query=kubernetes")
+4. hours: Estimated number of hours to complete
+5. free: true if free, false if paid
+
+Response Format:
+You MUST return ONLY a JSON object matching this schema, with no markdown code blocks, no additional explanation, and no extra characters:
+{{
+  "job_title_estimate": "Estimated job title from description",
+  "skills": [
+    {{
+      "name": "Skill Name",
+      "reason": "Why this skill is crucial for this job",
+      "courses": [
+        {{
+          "title": "Course Title",
+          "platform": "Platform Name",
+          "url": "URL",
+          "hours": 15,
+          "free": true
+        }}
+      ]
+    }}
+  ]
+}}
+"""
+        response = client.chat.completions.create(
+            model=llm_config.model or "llama-3.1-8b-instant",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.5,
+            max_tokens=1000,
+        )
+        content = response.choices[0].message.content.strip()
+        
+        # Clean up potential markdown formatting (e.g. ```json ... ```)
+        if content.startswith("```"):
+            lines = content.split("\n")
+            if lines[0].startswith("```"):
+                lines = lines[1:]
+            if lines[-1].startswith("```"):
+                lines = lines[:-1]
+            content = "\n".join(lines).strip()
+            
+        recommendations = json.loads(content)
+        return recommendations
+        
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON parsing error from Groq response: {e}")
+        raise HTTPException(
+            status_code=502,
+            detail="Failed to generate a valid structured course recommendation from LLM"
+        )
+    except Exception as e:
+        logger.error(f"Error in recommend_courses: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to recommend courses: {str(e)}"
+        )
 
 
 @app.delete("/api/results/{analysis_id}")

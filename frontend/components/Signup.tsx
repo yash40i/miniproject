@@ -9,9 +9,8 @@ import {
   validatePassword,
   getFieldError,
   getPasswordStrengthColor,
-  getPasswordStrengthBgColor,
 } from "@/lib/validation";
-import { Mail, Lock, User, Loader, Eye, EyeOff, Chrome, Check, X, ArrowRight } from "lucide-react";
+import { Mail, Lock, User, Loader, Eye, EyeOff, Check, X, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 
@@ -28,7 +27,6 @@ export default function SignupForm() {
   const [errors, setErrors] = useState<any[]>([]);
   const [apiError, setApiError] = useState("");
   const [isHovered, setIsHovered] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const passwordValidation = validatePassword(password);
 
@@ -56,7 +54,6 @@ export default function SignupForm() {
 
   const handleGoogleSuccess = async (credentialResponse: any) => {
     try {
-      setIsGoogleLoading(true);
       setApiError("");
 
       // Decode JWT token to get user info
@@ -92,7 +89,6 @@ export default function SignupForm() {
         err instanceof Error ? err.message : "Google signup failed. Please try again."
       );
     } finally {
-      setIsGoogleLoading(false);
     }
   };
 
@@ -149,7 +145,7 @@ export default function SignupForm() {
                 <GoogleLogin
                   onSuccess={handleGoogleSuccess}
                   onError={handleGoogleError}
-                  theme="dark"
+                  theme="filled_black"
                   size="large"
                   width="100%"
                 />

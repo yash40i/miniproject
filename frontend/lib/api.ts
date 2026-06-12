@@ -69,7 +69,7 @@ class APIClient {
   constructor() {
     this.client = axios.create({
       baseURL: API_URL,
-      timeout: 30000,
+      timeout: 240000,
     });
 
     // Add token to requests if available

@@ -43,15 +43,18 @@ class ResumePipeline:
         # Initialize components
         self.text_cleaner = TextCleaner(self.config.text_cleaning_config)
         self.embedding_gen = EmbeddingGenerator(self.config.embedding_config)
-        self.semantic_matcher = SemanticMatcher(self.config.semantic_matching_config)
+        self.semantic_matcher = SemanticMatcher(
+            self.config.semantic_matching_config,
+            self.config.llm_config
+        )
         
         # Initialize optional components
         if self.config.llm_config:
             self.feedback_gen = LLMFeedbackGenerator(self.config.llm_config)
+            self.learning_path_gen = LearningPathGenerator(self.config.llm_config)
         else:
             self.feedback_gen = None
-        
-        self.learning_path_gen = LearningPathGenerator()
+            self.learning_path_gen = LearningPathGenerator()
     
     def analyze_resume(
         self,
@@ -86,9 +89,9 @@ class ResumePipeline:
         print("[4/6] Generating semantic matches...")
         matching_result = self.semantic_matcher.match(resume_cleaned, job_cleaned)
         
-        print(f"   → Match Score: {matching_result.overall_score:.1f}%")
-        print(f"   → Matched Skills: {len(matching_result.matched_skills)}")
-        print(f"   → Missing Skills: {len(matching_result.missing_skills)}")
+        print(f"   -> Match Score: {matching_result.overall_score:.1f}%")
+        print(f"   -> Matched Skills: {len(matching_result.matched_skills)}")
+        print(f"   -> Missing Skills: {len(matching_result.missing_skills)}")
         
         feedback_result = None
         learning_path = None
@@ -110,14 +113,18 @@ class ResumePipeline:
                 learning_path = self.learning_path_gen.generate_path(
                     feedback_result,
                     feedback_result.priority_skills,
-                    weeks_available=12
+                    weeks_available=12,
+                    resume_text=resume_cleaned,
+                    job_description=job_cleaned
                 )
             elif matching_result.missing_skills:
                 # Create learning path from missing skills
                 learning_path = self.learning_path_gen.generate_path(
                     feedback_result,
                     matching_result.missing_skills[:3],
-                    weeks_available=12
+                    weeks_available=12,
+                    resume_text=resume_cleaned,
+                    job_description=job_cleaned
                 )
         
         metadata = {
