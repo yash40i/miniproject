@@ -42,6 +42,10 @@ class SemanticMatchingConfig:
 class LLMConfig:
     """Configuration for LLM-based feedback generation."""
     provider: str = "groq"  # Options: "openai", "groq", "gemini" - Groq is FREE!
+    # Model options:
+    #   - Groq: "llama-3.1-8b-instant", "llama-3.1-70b-versatile"
+    #   - OpenAI: "gpt-4", "gpt-4-turbo", "gpt-3.5-turbo"
+    #   - Gemini: "gemini-1.5-pro", "gemini-1.5-flash"
     model: str = "llama-3.1-8b-instant"  # Fast Llama 3.1 model - free & reliable
     temperature: float = 0.7
     max_tokens: int = 1000

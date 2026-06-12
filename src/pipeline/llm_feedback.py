@@ -78,10 +78,11 @@ class LLMFeedbackGenerator:
         
         elif provider == "gemini":
             try:
-                import anthropic
-                return anthropic.Anthropic(api_key=self.config.api_key)
+                import google.generativeai as genai
+                genai.configure(api_key=self.config.api_key)
+                return genai
             except ImportError:
-                raise ImportError("Install anthropic: pip install anthropic")
+                raise ImportError("Install google-generativeai: pip install google-generativeai")
         
         else:
             raise ValueError(f"Unknown provider: {provider}")
@@ -320,8 +321,16 @@ class LLMFeedbackGenerator:
                 return response.choices[0].message.content
             
             elif provider == "gemini":
-                # Placeholder for Gemini API
-                raise NotImplementedError("Gemini provider not yet implemented")
+                # Google Gemini API integration
+                model = self.client.GenerativeModel(self.config.model)
+                response = model.generate_content(
+                    prompt,
+                    generation_config=self.client.types.GenerationConfig(
+                        temperature=self.config.temperature,
+                        max_output_tokens=self.config.max_tokens,
+                    ),
+                )
+                return response.text
             
         except Exception as e:
             print(f"Error calling LLM: {e}")

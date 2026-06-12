@@ -1,0 +1,27 @@
+Jane Software - Senior Backend Engineer
+
+Experience: 8 years in backend development
+
+Skills: Python, FastAPI, REST API design, Database design (SQL and NoSQL), Microservices architecture, Docker, Kubernetes, AWS, CI/CD pipelines, Linux, Git, System design
+
+Current Role: Senior Backend Engineer at CloudTech Corp
+
+Previous Experience:
+- 3 years: Backend Developer at DataFlow Systems
+- 2 years: Junior Backend Developer at StartupXYZ
+
+Education: B.S. Computer Science - Tech University
+
+Technical Stack:
+- Languages: Python, Java, Go
+- Web Frameworks: FastAPI, Django, Flask
+- Databases: PostgreSQL, MongoDB, Redis
+- Cloud: AWS (EC2, RDS, Lambda, S3)
+- DevOps: Docker, Docker Compose, Jenkins, GitHub Actions
+- Architecture: Microservices, RESTful APIs, Event-driven systems
+
+Key Projects:
+- Built scalable microservices platform handling 1M+ requests/day
+- Designed and implemented REST API serving 50K+ concurrent users
+- Implemented CI/CD pipelines reducing deployment time by 80%
+- Migrated monolith to microservices architecture on AWS

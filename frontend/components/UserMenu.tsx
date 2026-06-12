@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/useAuth";
-import { LogOut, User, ChevronDown } from "lucide-react";
+import { LogOut, User, ChevronDown, Settings } from "lucide-react";
 
 export default function UserMenu() {
   const router = useRouter();
@@ -13,6 +13,11 @@ export default function UserMenu() {
   const handleLogout = () => {
     logout();
     router.push("/login");
+  };
+
+  const handleNavigate = (path: string) => {
+    router.push(path);
+    setIsOpen(false);
   };
 
   if (!user) {
@@ -42,6 +47,20 @@ export default function UserMenu() {
             <p className="text-sm font-medium text-white">{user.full_name || "User"}</p>
             <p className="text-xs text-slate-400">{user.email}</p>
           </div>
+          <button
+            onClick={() => handleNavigate("/profile")}
+            className="w-full flex items-center gap-2 px-4 py-3 text-left text-slate-300 hover:bg-slate-700/50 hover:text-white transition-all"
+          >
+            <User className="w-4 h-4" />
+            <span className="text-sm font-medium">My Profile</span>
+          </button>
+          <button
+            onClick={() => handleNavigate("/settings")}
+            className="w-full flex items-center gap-2 px-4 py-3 text-left text-slate-300 hover:bg-slate-700/50 hover:text-white transition-all"
+          >
+            <Settings className="w-4 h-4" />
+            <span className="text-sm font-medium">Settings</span>
+          </button>
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-2 px-4 py-3 text-left text-red-400 hover:bg-slate-700/50 transition-all"

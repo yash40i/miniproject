@@ -1,45 +1,21 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Upload, Loader } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { useAnalysisStore } from "@/lib/store";
-import { useAuth } from "@/lib/useAuth";
 import UserMenu from "@/components/UserMenu";
 import { toast } from "react-toastify";
 
 export default function Home() {
   const router = useRouter();
   const { setAnalysisId, setLoading, setError } = useAnalysisStore();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
 
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [jobDescription, setJobDescription] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isDragActive, setIsDragActive] = useState(false);
-
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.push("/login?from=/");
-    }
-  }, [isAuthenticated, authLoading, router]);
-
-  if (authLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
-        <div className="text-center">
-          <Loader className="w-12 h-12 animate-spin text-blue-400 mx-auto mb-4" />
-          <p className="text-white">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return null;
-  }
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();

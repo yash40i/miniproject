@@ -63,15 +63,29 @@ class EmbeddingGenerator:
         """
         if isinstance(texts, str):
             # Single text
+            if not texts or len(texts.strip()) == 0:
+                # Return empty embedding
+                return np.array([])
             embedding = self.model.encode(
                 texts,
                 normalize_embeddings=self.config.normalize_embeddings
             )
             return embedding
         else:
+            # Multiple texts - filter out empty strings
+            if not texts or len(texts) == 0:
+                # Return empty array
+                return np.array([])
+            
+            # Filter out empty strings
+            non_empty_texts = [t for t in texts if t and len(t.strip()) > 0]
+            if not non_empty_texts:
+                # All texts were empty
+                return np.array([])
+            
             # Multiple texts
             embeddings = self.model.encode(
-                texts,
+                non_empty_texts,
                 batch_size=self.config.batch_size,
                 normalize_embeddings=self.config.normalize_embeddings,
                 show_progress_bar=True
@@ -131,6 +145,28 @@ class EmbeddingGenerator:
         # Convert to numpy arrays if needed
         embeddings1 = np.array(embeddings1)
         embeddings2 = np.array(embeddings2)
+        
+        # Handle empty embeddings2 list (no job chunks)
+        if len(embeddings2) == 0:
+            if embeddings1.ndim == 1:
+                embeddings1 = embeddings1.reshape(1, -1)
+            n_rows = embeddings1.shape[0] if embeddings1.size > 0 else 0
+            # Return empty matrix with shape (N, 0)
+            return np.empty((n_rows, 0))
+        
+        # Handle empty embeddings1 list (no resume chunks)
+        if len(embeddings1) == 0:
+            if embeddings2.ndim == 1:
+                embeddings2 = embeddings2.reshape(1, -1)
+            m_cols = embeddings2.shape[0] if embeddings2.size > 0 else 0
+            # Return empty matrix with shape (0, M)
+            return np.empty((0, m_cols))
+        
+        # Ensure 2D arrays
+        if embeddings1.ndim == 1:
+            embeddings1 = embeddings1.reshape(1, -1)
+        if embeddings2.ndim == 1:
+            embeddings2 = embeddings2.reshape(1, -1)
         
         # Normalize
         embeddings1 = embeddings1 / (np.linalg.norm(embeddings1, axis=1, keepdims=True) + 1e-8)

@@ -15,9 +15,7 @@ class UserRegister(BaseModel):
     @field_validator('password')
     @classmethod
     def validate_password(cls, v):
-        """Validate password length (bcrypt limit is 72 bytes)"""
-        if len(v.encode('utf-8')) > 72:
-            raise ValueError('Password cannot be longer than 72 bytes')
+        """Validate password minimum length"""
         if len(v) < 8:
             raise ValueError('Password must be at least 8 characters')
         return v
@@ -78,9 +76,7 @@ class ResetPasswordRequest(BaseModel):
     @field_validator('new_password')
     @classmethod
     def validate_password(cls, v):
-        """Validate password length (bcrypt limit is 72 bytes)"""
-        if len(v.encode('utf-8')) > 72:
-            raise ValueError('Password cannot be longer than 72 bytes')
+        """Validate password minimum length"""
         if len(v) < 8:
             raise ValueError('Password must be at least 8 characters')
         return v
@@ -116,3 +112,46 @@ class GoogleAuthResponse(BaseModel):
     access_token: str
     token_type: str
     user: UserResponse
+
+
+class UserUpdateRequest(BaseModel):
+    """Update user profile request"""
+    full_name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    
+    class Config:
+        from_attributes = True
+
+
+class ChangePasswordRequest(BaseModel):
+    """Change password request"""
+    current_password: str
+    new_password: str
+    confirm_password: str
+    
+    @field_validator('new_password')
+    @classmethod
+    def validate_password(cls, v):
+        """Validate password minimum length"""
+        if len(v) < 8:
+            raise ValueError('Password must be at least 8 characters')
+        return v
+
+
+class ChangePasswordResponse(BaseModel):
+    """Change password response"""
+    message: str
+    success: bool
+
+
+class UserProfileResponse(BaseModel):
+    """User profile response with additional info"""
+    id: int
+    email: str
+    full_name: Optional[str]
+    is_active: bool
+    created_at: str
+    updated_at: str
+    
+    class Config:
+        from_attributes = True

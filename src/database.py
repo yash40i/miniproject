@@ -56,7 +56,7 @@ class Analysis(Base):
     __tablename__ = "analyses"
 
     id = Column(String(36), primary_key=True, index=True)  # UUID
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     job_description = Column(Text, nullable=False)
     status = Column(String(20), default="processing", index=True)  # processing, completed, failed
     error = Column(Text, nullable=True)
@@ -127,7 +127,7 @@ def get_db():
 def init_db():
     """Initialize database tables"""
     Base.metadata.create_all(bind=engine)
-    print("✓ Database initialized successfully")
+    print("Database initialized successfully")
 
 
 if __name__ == "__main__":

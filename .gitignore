@@ -1,61 +1,18 @@
-# Environment files
-.env
-.env.local
-.env.*.local
-.env.production
-.env.*.production
-
 # Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Virtual environments
 venv/
-ENV/
-env/
-.venv
+__pycache__/
+*.pyc
+.env
+analysis.db
 
-# IDE
+# Node / Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/.env.local
+frontend/out/
+frontend/build/
+
+# Environment & IDE
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
 .DS_Store
-
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-
-# Logs
-*.log
-logs/
-
-# Data files (optional)
-*.pdf
-data/
-resumes/
-outputs/
-
-# Temporary files
-*.tmp
-temp/

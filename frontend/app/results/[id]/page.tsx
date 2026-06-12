@@ -5,42 +5,20 @@ import { useParams, useRouter } from "next/navigation";
 import { Loader, CheckCircle2, AlertCircle, BarChart3, Zap, Calendar } from "lucide-react";
 import { apiClient, AnalysisResult } from "@/lib/api";
 import { useAnalysisStore } from "@/lib/store";
-import { useAuth } from "@/lib/useAuth";
-import UserMenu from "@/components/UserMenu";
+import UserProfileForm, { UserProfile } from "@/components/UserProfileForm";
 import { toast } from "react-toastify";
 
 export default function ResultsPage() {
   const params = useParams();
   const router = useRouter();
   const analysisId = params.id as string;
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
 
   const { analysisResult, setAnalysisResult, setLoading } = useAnalysisStore();
   const [result, setResult] = useState<AnalysisResult | null>(analysisResult || null);
   const [isLoading, setIsLoading] = useState(!analysisResult);
   const [activeTab, setActiveTab] = useState<"overview" | "skills" | "path">("overview");
-
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.push(`/login?from=/results/${analysisId}`);
-    }
-  }, [isAuthenticated, authLoading, router, analysisId]);
-
-  if (authLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
-        <div className="text-center">
-          <Loader className="w-12 h-12 animate-spin text-blue-400 mx-auto mb-4" />
-          <p className="text-white">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return null;
-  }
+  const [adaptiveLoading, setAdaptiveLoading] = useState(false);
+  const [adaptivePath, setAdaptivePath] = useState<any>(null);
 
   useEffect(() => {
     const fetchResults = async () => {
@@ -127,15 +105,12 @@ export default function ResultsPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold text-white">Analysis Results</h1>
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => router.push("/")}
-                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition"
-              >
-                New Analysis
-              </button>
-              <UserMenu />
-            </div>
+            <button
+              onClick={() => router.push("/")}
+              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition"
+            >
+              New Analysis
+            </button>
           </div>
         </div>
       </header>
@@ -287,55 +262,260 @@ export default function ResultsPage() {
               </div>
             )}
 
-            {activeTab === "path" && learningPath && (
-              <div className="bg-slate-800 border border-slate-700 rounded-lg p-6 space-y-6">
-                <div className="space-y-2">
-                  <h3 className="text-lg font-semibold text-white">{learningPath.title}</h3>
-                  <p className="text-slate-400">
-                    {learningPath.total_hours} hours over {learningPath.estimated_weeks} weeks
-                  </p>
-                </div>
-
-                <div className="space-y-4">
-                  {learningPath.milestones.map((milestone, idx) => (
-                    <div
-                      key={idx}
-                      className="p-4 border border-slate-600 rounded-lg space-y-3"
-                    >
+            {activeTab === "path" && (
+              <div className="space-y-6">
+                {!adaptivePath ? (
+                  <>
+                    <div className="bg-blue-900/20 border border-blue-700 rounded-lg p-6 space-y-4">
+                      <h3 className="text-lg font-semibold text-white">
+                        ✨ Personalize Your Learning Path
+                      </h3>
+                      <p className="text-slate-300">
+                        Tell us about your learning preferences and we'll create a personalized, adaptive learning roadmap just for you. This considers your experience level, learning style, time availability, and budget constraints.
+                      </p>
+                    </div>
+                    
+                    <UserProfileForm
+                      isLoading={adaptiveLoading}
+                      onSubmit={async (profile: UserProfile) => {
+                        try {
+                          setAdaptiveLoading(true);
+                          const response = await apiClient.post(
+                            `/api/learning-path/adaptive`,
+                            {
+                              analysis_id: analysisId,
+                              user_profile: profile,
+                            }
+                          );
+                          setAdaptivePath(response.learning_path);
+                          toast.success("Adaptive learning path generated!");
+                        } catch (error: any) {
+                          toast.error(error.message || "Failed to generate adaptive path");
+                        } finally {
+                          setAdaptiveLoading(false);
+                        }
+                      }}
+                    />
+                  </>
+                ) : (
+                  <>
+                    {/* Adaptive Path Display */}
+                    <div className="bg-gradient-to-r from-green-900/30 to-blue-900/30 border border-green-700 rounded-lg p-6 space-y-4">
                       <div className="flex items-start justify-between">
                         <div>
-                          <p className="text-white font-semibold">
-                            {idx + 1}. {milestone.title}
+                          <h3 className="text-lg font-semibold text-white">
+                            🎯 Your Personalized Learning Path
+                          </h3>
+                          <p className="text-slate-300 mt-1">
+                            Adaptivity Score: <span className="text-green-400 font-semibold">{(adaptivePath.adaptivity_score * 100).toFixed(0)}%</span>
                           </p>
-                          <p className="text-slate-400 text-sm">{milestone.description}</p>
                         </div>
-                        <span className="px-3 py-1 bg-blue-900 text-blue-200 rounded-full text-sm">
-                          {milestone.difficulty}
-                        </span>
+                        <button
+                          onClick={() => {
+                            setAdaptivePath(null);
+                          }}
+                          className="px-4 py-2 text-sm bg-slate-700 hover:bg-slate-600 text-white rounded transition"
+                        >
+                          Edit Profile
+                        </button>
                       </div>
 
-                      <div className="flex gap-4 text-sm text-slate-400">
-                        <span>{milestone.estimated_hours}h</span>
-                        {milestone.resources.length > 0 && (
-                          <span>{milestone.resources.length} resources</span>
-                        )}
-                      </div>
-
-                      {milestone.resources.length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-slate-600">
-                          <p className="text-sm font-medium text-slate-300 mb-2">Resources:</p>
-                          <ul className="space-y-1">
-                            {milestone.resources.map((res, ridx) => (
-                              <li key={ridx} className="text-sm text-slate-400">
-                                • {res.title} ({res.type})
-                              </li>
-                            ))}
-                          </ul>
+                      <div className="grid grid-cols-3 gap-4 py-4">
+                        <div className="bg-slate-800/50 p-3 rounded">
+                          <p className="text-xs text-slate-400">Total Hours</p>
+                          <p className="text-2xl font-bold text-blue-400">
+                            {adaptivePath.total_hours}
+                          </p>
                         </div>
-                      )}
+                        <div className="bg-slate-800/50 p-3 rounded">
+                          <p className="text-xs text-slate-400">Weeks</p>
+                          <p className="text-2xl font-bold text-purple-400">
+                            {adaptivePath.estimated_weeks}
+                          </p>
+                        </div>
+                        <div className="bg-slate-800/50 p-3 rounded">
+                          <p className="text-xs text-slate-400">Progress</p>
+                          <p className="text-2xl font-bold text-green-400">
+                            {adaptivePath.overall_progress || 0}%
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                  ))}
-                </div>
+
+                    {/* Milestones */}
+                    <div className="space-y-4">
+                      {adaptivePath.milestones.map((milestone: any, idx: number) => (
+                        <div
+                          key={idx}
+                          className="p-5 bg-slate-800 border border-slate-700 rounded-lg space-y-3 hover:border-slate-600 transition"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <p className="text-white font-semibold">
+                                {idx + 1}. {milestone.title}
+                              </p>
+                              <p className="text-slate-400 text-sm mt-1">
+                                {milestone.description}
+                              </p>
+                            </div>
+                            <span className="px-3 py-1 bg-blue-900 text-blue-200 rounded-full text-sm whitespace-nowrap">
+                              {milestone.difficulty}
+                            </span>
+                          </div>
+
+                          <div className="flex gap-4 text-sm text-slate-400">
+                            <span>⏱️ {milestone.estimated_hours} hours</span>
+                            <span>📚 {milestone.resources?.length || 0} resources</span>
+                            <span>🎯 {milestone.projects?.length || 0} projects</span>
+                          </div>
+
+                          {/* Success Criteria */}
+                          {milestone.success_criteria && milestone.success_criteria.length > 0 && (
+                            <div className="mt-3 pt-3 border-t border-slate-700">
+                              <p className="text-sm font-medium text-slate-300 mb-2">Success Criteria:</p>
+                              <ul className="space-y-1">
+                                {milestone.success_criteria.map((criteria: string, cidx: number) => (
+                                  <li key={cidx} className="text-sm text-slate-400">
+                                    ✓ {criteria}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {/* Projects */}
+                          {milestone.projects && milestone.projects.length > 0 && (
+                            <div className="mt-3 pt-3 border-t border-slate-700">
+                              <p className="text-sm font-medium text-slate-300 mb-2">Hands-On Projects:</p>
+                              <ul className="space-y-2">
+                                {milestone.projects.map((project: any, pidx: number) => (
+                                  <li key={pidx} className="text-sm text-slate-400">
+                                    📦 <span className="text-slate-200">{project.title}</span>
+                                    <p className="text-xs text-slate-500 ml-4">{project.description}</p>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {/* Resources */}
+                          {milestone.resources && milestone.resources.length > 0 && (
+                            <div className="mt-3 pt-3 border-t border-slate-700">
+                              <p className="text-sm font-medium text-slate-300 mb-2">Learning Resources:</p>
+                              <ul className="space-y-2">
+                                {milestone.resources.slice(0, 3).map((res: any, ridx: number) => (
+                                  <li
+                                    key={ridx}
+                                    className="text-sm text-slate-400 flex items-start gap-2"
+                                  >
+                                    <span className="text-blue-400">→</span>
+                                    <div>
+                                      <p className="text-slate-200">{res.title}</p>
+                                      <p className="text-xs text-slate-500">
+                                        {res.type}
+                                        {res.free && " • Free"}
+                                      </p>
+                                    </div>
+                                  </li>
+                                ))}
+                                {milestone.resources.length > 3 && (
+                                  <p className="text-xs text-slate-500 ml-4">
+                                    +{milestone.resources.length - 3} more resources
+                                  </p>
+                                )}
+                              </ul>
+                            </div>
+                          )}
+
+                          {/* Progress */}
+                          <div className="mt-3 pt-3 border-t border-slate-700">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm text-slate-300">Progress</span>
+                              <span className="text-sm font-medium text-blue-400">
+                                {milestone.progress_percentage || 0}%
+                              </span>
+                            </div>
+                            <div className="w-full bg-slate-700 rounded-full h-2">
+                              <div
+                                className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all"
+                                style={{
+                                  width: `${milestone.progress_percentage || 0}%`,
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {/* Static Learning Path Fallback */}
+                {!adaptivePath && learningPath && (
+                  <div className="mt-8 pt-6 border-t border-slate-700">
+                    <p className="text-sm text-slate-400 mb-4">
+                      Or view the standard learning path:
+                    </p>
+                    <div className="bg-slate-800 border border-slate-700 rounded-lg p-6 space-y-6">
+                      <div className="space-y-2">
+                        <h3 className="text-lg font-semibold text-white">
+                          {learningPath.title}
+                        </h3>
+                        <p className="text-slate-400">
+                          {learningPath.total_hours} hours over {learningPath.estimated_weeks} weeks
+                        </p>
+                      </div>
+
+                      <div className="space-y-4">
+                        {learningPath.milestones.map((milestone: any, idx: number) => (
+                          <div
+                            key={idx}
+                            className="p-4 border border-slate-600 rounded-lg space-y-3"
+                          >
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <p className="text-white font-semibold">
+                                  {idx + 1}. {milestone.title}
+                                </p>
+                                <p className="text-slate-400 text-sm">
+                                  {milestone.description}
+                                </p>
+                              </div>
+                              <span className="px-3 py-1 bg-blue-900 text-blue-200 rounded-full text-sm">
+                                {milestone.difficulty}
+                              </span>
+                            </div>
+
+                            <div className="flex gap-4 text-sm text-slate-400">
+                              <span>{milestone.estimated_hours}h</span>
+                              {milestone.resources.length > 0 && (
+                                <span>{milestone.resources.length} resources</span>
+                              )}
+                            </div>
+
+                            {milestone.resources.length > 0 && (
+                              <div className="mt-3 pt-3 border-t border-slate-600">
+                                <p className="text-sm font-medium text-slate-300 mb-2">
+                                  Resources:
+                                </p>
+                                <ul className="space-y-1">
+                                  {milestone.resources.map((res: any, ridx: number) => (
+                                    <li
+                                      key={ridx}
+                                      className="text-sm text-slate-400"
+                                    >
+                                      • {res.title} ({res.type})
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
