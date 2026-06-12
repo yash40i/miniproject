@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y \
 
 # Copy requirements (if using a requirements.txt)
 # For now, we'll install packages that match our pipeline setup
-COPY requirements.txt . 2>/dev/null ||echo "No requirements.txt, will install manually"
+COPY requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir \
