@@ -27,7 +27,7 @@ google-generativeai>=0.3.0  # Google Gemini
 
 # Utilities
 python-dotenv>=1.0.0     # Environment variable management
-pydantic>=2.0.0          # Data validation
+pydantic[email]>=2.0.0   # Data validation with email support
 aiofiles>=23.0.0         # Async file handling
 
 # Development & Testing (optional)
