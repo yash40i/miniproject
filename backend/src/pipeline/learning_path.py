@@ -757,12 +757,13 @@ class LearningPathGenerator:
             
         difficulty = difficulty or "beginner"
         
+        job_str = f"The learner is targeting this job description: {job_description[:300]}...\n" if job_description else ""
+        resume_str = f"The learner's resume context: {resume_text[:300]}...\n" if resume_text else ""
+        
         prompt = f"""
 You are an expert technical career advisor and educator. Your task is to recommend exactly 3 high-quality online courses, tutorials, or official documentations to help a learner master the skill "{skill_name}" at the "{difficulty}" level.
 
-{f'The learner is targeting this job description: {job_description[:300]}...' if job_description else ''}
-{f'The learner\'s resume context: {resume_text[:300]}...' if resume_text else ''}
-
+{job_str}{resume_str}
 For each of the 3 recommended resources, you MUST provide:
 1. title: The actual name of the course or tutorial (e.g. "React - The Complete Guide (Academind)")
 2. url: A real, valid web link (or high-quality search link on platforms like Udemy, Coursera, FreeCodeCamp, Pluralsight, or official docs, e.g. "https://www.coursera.org/search?query=react")
