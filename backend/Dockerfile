@@ -2,6 +2,9 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+ENV PIP_NO_CACHE_DIR=1
+ENV PYTHONUNBUFFERED=1
+
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     gcc \
@@ -9,14 +12,22 @@ RUN apt-get update && apt-get install -y \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements.txt from backend/ (context = repo root)
-COPY backend/requirements.txt .
+# Copy the entire project to avoid context path issues
+COPY . /app/repo/
+
+# Move the backend files to /app
+RUN if [ -d "/app/repo/backend" ]; then \
+      cp -r /app/repo/backend/* /app/; \
+    else \
+      cp -r /app/repo/* /app/; \
+    fi && \
+    rm -rf /app/repo
 
 # Install PyTorch CPU version first to prevent downloading the massive 2.5GB CUDA version
-RUN pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+RUN pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
 
 # Install core server dependencies first
-RUN pip install --no-cache-dir \
+RUN pip install \
     fastapi \
     "uvicorn[standard]" \
     python-multipart \
@@ -28,17 +39,13 @@ RUN pip install --no-cache-dir \
     "aiofiles>=23.0.0"
 
 # Install all remaining dependencies from requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install -r requirements.txt
 
 # Download spaCy model
 RUN python -m spacy download en_core_web_sm
 
 # Download NLTK data
 RUN python -c "import nltk; nltk.download('punkt'); nltk.download('punkt_tab'); nltk.download('stopwords')"
-
-# Copy application code from backend/ (context = repo root)
-COPY backend/src /app/src
-COPY backend/main.py /app/main.py
 
 # Expose port
 EXPOSE 8000
