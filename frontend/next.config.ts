@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
-const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+let rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+// Force HTTPS for Railway to prevent 301 redirects that turn POST into GET
+if (rawApiUrl.includes("railway.app") && rawApiUrl.startsWith("http://")) {
+  rawApiUrl = rawApiUrl.replace("http://", "https://");
+}
 const API_URL = rawApiUrl.endsWith('/') ? rawApiUrl.slice(0, -1) : rawApiUrl;
 
 const nextConfig: NextConfig = {
