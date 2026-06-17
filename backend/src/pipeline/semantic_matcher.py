@@ -10,6 +10,7 @@ from dataclasses import dataclass
 
 from src.config.config import SemanticMatchingConfig, LLMConfig
 from src.pipeline.embeddings import EmbeddingGenerator
+from src.pipeline.knowledge_graph import ProbabilisticCluster
 
 
 @dataclass
@@ -110,6 +111,17 @@ class SemanticMatcher:
             job_chunks[i] for i in range(len(job_chunks))
             if i not in matched_job_indices
         ]
+        
+        # Augment missing skills using ProbabilisticCluster
+        cluster = ProbabilisticCluster()
+        companions = cluster.get_companion_skills(missing_skills, threshold=0.7)
+        matched_resume_skills_lower = {chunk.lower() for chunk in resume_chunks}
+        missing_skills_lower = {s.lower() for s in missing_skills}
+        for comp in companions:
+            comp_name = comp["skill"]
+            if comp_name.lower() not in matched_resume_skills_lower and comp_name.lower() not in missing_skills_lower:
+                missing_skills.append(comp_name)
+                print(f"   -> Probabilistic Grouping: Added companion skill '{comp_name}' (P={comp['probability']:.2f})")
         
         # Calculate overall score
         overall_score = self._calculate_overall_score(matches)

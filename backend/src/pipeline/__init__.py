@@ -9,6 +9,7 @@ from src.pipeline.semantic_matcher import match_resume_to_job, SemanticMatcher, 
 from src.pipeline.llm_feedback import generate_feedback, LLMFeedbackGenerator, FeedbackResult
 from src.pipeline.learning_path import generate_learning_path, LearningPathGenerator, LearningPath, Milestone
 from src.pipeline.pipeline import run_pipeline, ResumePipeline, AnalysisResult
+from src.pipeline.gap_engine import GapAnalysisEngine, SkillNodeMap, NodeActivation, NodeState
 
 __all__ = [
     'parse_resume',
@@ -32,4 +33,8 @@ __all__ = [
     'run_pipeline',
     'ResumePipeline',
     'AnalysisResult',
+    'GapAnalysisEngine',
+    'SkillNodeMap',
+    'NodeActivation',
+    'NodeState',
 ]

@@ -47,6 +47,11 @@ class User(Base):
     google_email = Column(String(255), nullable=True)
     oauth_provider = Column(String(50), nullable=True)  # google, github, etc.
 
+    # Gamification
+    current_streak = Column(Integer, default=0)
+    longest_streak = Column(Integer, default=0)
+    last_active_date = Column(DateTime, nullable=True)
+
     # Relationships
     analyses = relationship("Analysis", back_populates="user", cascade="all, delete-orphan")
 
@@ -80,6 +85,7 @@ class MatchingResult(Base):
     matched_percentage = Column(Float, nullable=False)
     matched_skills = Column(JSON, nullable=False)  # List of matched skills
     missing_skills = Column(JSON, nullable=False)  # List of missing skills
+    skill_node_map = Column(JSON, nullable=True)   # Vector-Gap node activation map
 
     # Relationship
     analysis = relationship("Analysis", back_populates="matching_result")
@@ -110,6 +116,10 @@ class LearningPath(Base):
     total_hours = Column(Integer, nullable=False)
     estimated_weeks = Column(Integer, nullable=False)
     milestones = Column(JSON, nullable=False)  # List of milestone objects
+    user_profile = Column(JSON, nullable=True)
+    overall_progress = Column(Integer, default=0)
+    adaptivity_score = Column(Float, default=0.0)
+    recommendation_engine_used = Column(String(50), default="static")
 
     # Relationship
     analysis = relationship("Analysis", back_populates="learning_path")

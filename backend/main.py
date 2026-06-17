@@ -105,6 +105,16 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     
     return user
 
+async def get_current_user_optional(credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)), db: Session = Depends(get_db)) -> Optional[User]:
+    """Dependency to optionally get authenticated user from JWT token"""
+    if not credentials:
+        return None
+    token = credentials.credentials
+    token_data = verify_token(token)
+    if token_data is None:
+        return None
+    return db.query(User).filter(User.id == token_data["user_id"]).first()
+
 # Request/Response models
 class AnalysisRequest(BaseModel):
     """Request model for resume analysis"""
@@ -681,7 +691,8 @@ async def run_analysis_background(
             overall_score=float(result.matching_result.overall_score),
             matched_percentage=float(result.matching_result.matched_percentage),
             matched_skills=matched_skills_data,
-            missing_skills=result.matching_result.missing_skills
+            missing_skills=result.matching_result.missing_skills,
+            skill_node_map=result.skill_node_map.to_dict() if result.skill_node_map else None
         )
         db.add(matching_result_db)
         
@@ -814,7 +825,8 @@ async def get_analysis_results(
             "overall_score": analysis.matching_result.overall_score,
             "matched_percentage": analysis.matching_result.matched_percentage,
             "matched_skills": analysis.matching_result.matched_skills,
-            "missing_skills": analysis.matching_result.missing_skills
+            "missing_skills": analysis.matching_result.missing_skills,
+            "skill_node_map": analysis.matching_result.skill_node_map
         }
     
     # Include feedback if available
@@ -1065,7 +1077,8 @@ async def generate_adaptive_learning_path(
             feedback=feedback,  # This needs to be converted from DB
             priority_skills=feedback.priority_skills,
             user_profile=user_profile,
-            weeks_available=12
+            weeks_available=12,
+            job_context=analysis.job_description
         )
         
         return {
@@ -1091,7 +1104,7 @@ async def generate_adaptive_learning_path(
                         "success_criteria": m.success_criteria,
                         "projects": m.projects,
                         "resources": m.resources,
-                        "progress_percentage": m.progress_percentage
+                        "is_completed": m.is_completed,
                     }
                     for m in adaptive_path.milestones
                 ],
@@ -1110,7 +1123,7 @@ async def generate_adaptive_learning_path(
 async def update_milestone_progress(
     analysis_id: str,
     update: MilestoneProgressRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db)
 ):
     """
@@ -1122,14 +1135,15 @@ async def update_milestone_progress(
     - **is_completed**: Whether milestone is completed
     """
     try:
-        # Verify ownership
-        analysis = db.query(Analysis).filter(
-            Analysis.id == analysis_id,
-            Analysis.user_id == current_user.id
-        ).first()
+        # Verify ownership (if user logged in, check user_id, else just check existence)
+        query = db.query(Analysis).filter(Analysis.id == analysis_id)
+        if current_user:
+            query = query.filter(Analysis.user_id == current_user.id)
+            
+        analysis = query.first()
         
         if not analysis:
-            raise HTTPException(status_code=404, detail="Analysis not found")
+            raise HTTPException(status_code=404, detail="Analysis not found or permission denied")
         
         # Get learning path
         learning_path_db = db.query(LearningPath).filter(LearningPath.analysis_id == analysis_id).first()
@@ -1137,7 +1151,7 @@ async def update_milestone_progress(
             raise HTTPException(status_code=404, detail="Learning path not found")
         
         # Update milestone progress
-        milestones = learning_path_db.milestones
+        milestones = list(learning_path_db.milestones)
         for milestone in milestones:
             if milestone.get("id") == update.milestone_id:
                 milestone["progress_percentage"] = min(100, max(0, update.progress_percentage))
@@ -1150,6 +1164,31 @@ async def update_milestone_progress(
         
         # Update database
         learning_path_db.milestones = milestones
+        learning_path_db.overall_progress = overall_progress
+        
+        # Update User Streak if logged in
+        if current_user:
+            now = datetime.utcnow()
+            if current_user.last_active_date:
+                # Calculate days between now and last active date (ignoring time)
+                delta_days = (now.date() - current_user.last_active_date.date()).days
+                
+                if delta_days == 1:
+                    # Consecutive day!
+                    current_user.current_streak += 1
+                elif delta_days > 1:
+                    # Streak broken
+                    current_user.current_streak = 1
+            else:
+                # First time tracking streak
+                current_user.current_streak = 1
+                
+            # Update longest streak
+            if current_user.current_streak > current_user.longest_streak:
+                current_user.longest_streak = current_user.current_streak
+                
+            current_user.last_active_date = now
+            
         db.commit()
         
         return {
@@ -1158,6 +1197,7 @@ async def update_milestone_progress(
             "progress_percentage": update.progress_percentage,
             "is_completed": update.is_completed,
             "overall_progress": overall_progress,
+            "current_streak": current_user.current_streak if current_user else 0,
             "message": "Milestone progress updated successfully"
         }
     

@@ -1,0 +1,52 @@
+{
+  "Kubernetes": {
+    "Docker": 0.95,
+    "Helm": 0.80,
+    "AWS": 0.70,
+    "Terraform": 0.65
+  },
+  "Docker": {
+    "Kubernetes": 0.50,
+    "Linux": 0.60
+  },
+  "FastAPI": {
+    "Python": 1.0,
+    "Docker": 0.75,
+    "PostgreSQL": 0.70,
+    "Pydantic": 0.90,
+    "SQLAlchemy": 0.85
+  },
+  "React": {
+    "TypeScript": 0.75,
+    "JavaScript": 0.95,
+    "Redux": 0.70,
+    "CSS": 0.85
+  },
+  "MachineLearning": {
+    "Python": 0.98,
+    "Pandas": 0.90,
+    "Scikit-Learn": 0.92,
+    "NumPy": 0.95
+  },
+  "DeepLearning": {
+    "PyTorch": 0.85,
+    "TensorFlow": 0.70,
+    "GPU Programming": 0.60
+  },
+  "Django": {
+    "Python": 1.0,
+    "PostgreSQL": 0.75,
+    "Docker": 0.65
+  },
+  "Express": {
+    "NodeJS": 0.95,
+    "MongoDB": 0.70,
+    "TypeScript": 0.65
+  },
+  "TypeScript": {
+    "JavaScript": 0.98
+  },
+  "PostgreSQL": {
+    "RelationalDB": 0.95
+  }
+}

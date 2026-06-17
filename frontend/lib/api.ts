@@ -30,6 +30,23 @@ export interface MatchingResult {
   matched_percentage: number;
   matched_skills: SkillMatch[];
   missing_skills: string[];
+  skill_node_map?: SkillNodeMap;
+}
+
+export interface NodeActivation {
+  skill: string;
+  similarity_score: number;
+  state: "Mastered" | "Unlocked" | "Locked";
+  prerequisites: string[];
+  unmet_prerequisites: string[];
+  companion_skills: { skill: string; probability: number }[];
+  is_gap: boolean;
+}
+
+export interface SkillNodeMap {
+  threshold: number;
+  summary: { total: number; mastered: number; unlocked: number; locked: number };
+  nodes: NodeActivation[];
 }
 
 export interface FeedbackResult {
@@ -183,6 +200,19 @@ class APIClient {
   async deleteAnalysis(analysisId: string): Promise<void> {
     try {
       await this.client.delete(`/api/results/${analysisId}`);
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async updateMilestoneProgress(analysisId: string, milestoneId: number, progressPercentage: number, isCompleted: boolean = false): Promise<any> {
+    try {
+      const response = await this.client.post(`/api/learning-path/${analysisId}/milestone-progress`, {
+        milestone_id: milestoneId,
+        progress_percentage: progressPercentage,
+        is_completed: isCompleted
+      });
+      return response.data;
     } catch (error) {
       throw this.handleError(error);
     }

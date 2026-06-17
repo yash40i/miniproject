@@ -4,7 +4,7 @@ Coordinates all stages of the resume analysis pipeline.
 """
 
 from typing import Optional, Dict, Any
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import json
 
 from src.config.config import PipelineConfig
@@ -14,6 +14,7 @@ from src.pipeline.embeddings import EmbeddingGenerator
 from src.pipeline.semantic_matcher import SemanticMatcher, MatchingResult
 from src.pipeline.llm_feedback import LLMFeedbackGenerator, FeedbackResult
 from src.pipeline.learning_path import LearningPathGenerator, LearningPath
+from src.pipeline.gap_engine import GapAnalysisEngine, SkillNodeMap
 
 
 @dataclass
@@ -23,6 +24,7 @@ class AnalysisResult:
     feedback_result: Optional[FeedbackResult]
     learning_path: Optional[LearningPath]
     metadata: Dict[str, Any]
+    skill_node_map: Optional[SkillNodeMap] = field(default=None)
 
 
 class ResumePipeline:
@@ -47,6 +49,9 @@ class ResumePipeline:
             self.config.semantic_matching_config,
             self.config.llm_config
         )
+        
+        # Gap Analysis Engine — shares the embedding generator to avoid re-loading the model
+        self.gap_engine = GapAnalysisEngine(embedding_gen=self.embedding_gen)
         
         # Initialize optional components
         if self.config.llm_config:
@@ -92,6 +97,36 @@ class ResumePipeline:
         print(f"   -> Match Score: {matching_result.overall_score:.1f}%")
         print(f"   -> Matched Skills: {len(matching_result.matched_skills)}")
         print(f"   -> Missing Skills: {len(matching_result.missing_skills)}")
+
+        # ── Vector-Gap Extraction & Node Activation ──────────────────
+        print("[4b] Running Vector-Gap Extraction & Node Activation...")
+        skill_node_map = None
+        try:
+            # Collect all job skills: matched + missing
+            all_job_skills = (
+                [m.job_skill for m in matching_result.matched_skills]
+                + matching_result.missing_skills
+            )
+            # Deduplicate while preserving order
+            seen: set = set()
+            unique_job_skills = []
+            for s in all_job_skills:
+                if s and s.lower() not in seen:
+                    seen.add(s.lower())
+                    unique_job_skills.append(s)
+
+            if unique_job_skills:
+                skill_node_map = self.gap_engine.analyse(
+                    resume_text=resume_cleaned,
+                    job_skills=unique_job_skills,
+                )
+                print(
+                    f"   -> Mastered={len(skill_node_map.mastered)}, "
+                    f"Unlocked={len(skill_node_map.unlocked)}, "
+                    f"Locked={len(skill_node_map.locked)}"
+                )
+        except Exception as e:
+            print(f"   ⚠️  Gap analysis skipped: {str(e)}")
         
         feedback_result = None
         learning_path = None
@@ -138,7 +173,8 @@ class ResumePipeline:
             matching_result=matching_result,
             feedback_result=feedback_result,
             learning_path=learning_path,
-            metadata=metadata
+            metadata=metadata,
+            skill_node_map=skill_node_map,
         )
     
     def format_report(self, result: AnalysisResult) -> str:

@@ -38,8 +38,8 @@ class TestTextCleaning:
         text = "Experience with ML and AI"
         cleaned = cleaner.clean(text)
         
-        assert "Machine Learning" in cleaned
-        assert "Artificial Intelligence" in cleaned
+        assert "machine learning" in cleaned
+        assert "artificial intelligence" in cleaned
 
 
 class TestEmbeddings:

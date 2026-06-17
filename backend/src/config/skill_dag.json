@@ -1,0 +1,116 @@
+{
+  "skills": {
+    "Python": {
+      "type": "terminal",
+      "prerequisites": []
+    },
+    "JavaScript": {
+      "type": "terminal",
+      "prerequisites": []
+    },
+    "TypeScript": {
+      "type": "terminal",
+      "prerequisites": ["JavaScript"]
+    },
+    "HTML": {
+      "type": "terminal",
+      "prerequisites": []
+    },
+    "CSS": {
+      "type": "terminal",
+      "prerequisites": ["HTML"]
+    },
+    "React": {
+      "type": "terminal",
+      "prerequisites": ["JavaScript", "CSS"]
+    },
+    "Angular": {
+      "type": "terminal",
+      "prerequisites": ["TypeScript", "JavaScript"]
+    },
+    "Vue": {
+      "type": "terminal",
+      "prerequisites": ["JavaScript"]
+    },
+    "FastAPI": {
+      "type": "terminal",
+      "prerequisites": ["Python"]
+    },
+    "Django": {
+      "type": "terminal",
+      "prerequisites": ["Python"]
+    },
+    "NodeJS": {
+      "type": "terminal",
+      "prerequisites": ["JavaScript"]
+    },
+    "Express": {
+      "type": "terminal",
+      "prerequisites": ["NodeJS"]
+    },
+    "RelationalDB": {
+      "type": "terminal",
+      "prerequisites": []
+    },
+    "PostgreSQL": {
+      "type": "terminal",
+      "prerequisites": ["RelationalDB"]
+    },
+    "MongoDB": {
+      "type": "terminal",
+      "prerequisites": []
+    },
+    "Docker": {
+      "type": "terminal",
+      "prerequisites": []
+    },
+    "Kubernetes": {
+      "type": "terminal",
+      "prerequisites": ["Docker"]
+    },
+    "AWS": {
+      "type": "terminal",
+      "prerequisites": []
+    },
+    "MachineLearning": {
+      "type": "terminal",
+      "prerequisites": ["Python"]
+    },
+    "DeepLearning": {
+      "type": "terminal",
+      "prerequisites": ["MachineLearning"]
+    },
+    "ComputerVision": {
+      "type": "terminal",
+      "prerequisites": ["DeepLearning"]
+    },
+    "NLP": {
+      "type": "terminal",
+      "prerequisites": ["DeepLearning"]
+    },
+    "SystemDesign": {
+      "type": "terminal",
+      "prerequisites": []
+    },
+    "Frontend": {
+      "type": "competency",
+      "rule": "React ^ HTML ^ CSS"
+    },
+    "Backend": {
+      "type": "competency",
+      "rule": "FastAPI ^ RelationalDB"
+    },
+    "FullStack": {
+      "type": "competency",
+      "rule": "Frontend ^ Backend"
+    },
+    "DevOps": {
+      "type": "competency",
+      "rule": "Docker ^ Kubernetes ^ AWS"
+    },
+    "DataScience": {
+      "type": "competency",
+      "rule": "Python ^ MachineLearning"
+    }
+  }
+}

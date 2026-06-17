@@ -152,6 +152,8 @@ class UserProfileResponse(BaseModel):
     is_active: bool
     created_at: str
     updated_at: str
+    current_streak: int = 0
+    longest_streak: int = 0
     
     class Config:
         from_attributes = True

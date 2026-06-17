@@ -12,6 +12,7 @@ import json
 
 from src.pipeline.llm_feedback import FeedbackResult
 from src.config.config import LLMConfig
+from src.pipeline.knowledge_graph import SkillDAG, ProbabilisticCluster
 
 
 @dataclass
@@ -608,6 +609,9 @@ class LearningPathGenerator:
         
         if self.config:
             self._initialize_llm_client()
+            
+        self.skill_dag = SkillDAG()
+        self.market_cluster = ProbabilisticCluster()
     
     def _initialize_llm_client(self):
         """Initialize Groq or OpenAI client for dynamic generation."""
@@ -627,6 +631,15 @@ class LearningPathGenerator:
             print(f"Warning: Could not initialize {provider} client: {e}")
             self.llm_client = None
     
+    def _is_skill_in_resume(self, skill_name: str, resume_text: Optional[str]) -> bool:
+        if not resume_text:
+            return False
+        canonical = self.skill_dag.find_canonical_name(skill_name)
+        if not canonical:
+            return skill_name.lower() in resume_text.lower()
+        return (canonical.lower() in resume_text.lower() or 
+                skill_name.lower() in resume_text.lower())
+
     def generate_path(
         self,
         feedback: FeedbackResult,
@@ -649,22 +662,48 @@ class LearningPathGenerator:
             LearningPath object
         """
         
-        # Create milestones for each priority skill
+        # 1. Expand priority_skills to include DAG prerequisites and topological sort
+        expanded_skills = self.skill_dag.get_all_required_skills(priority_skills)
+        
+        # 2. Add companion (market cluster) skills based on conditional probabilities
+        companion_skills = self.market_cluster.get_companion_skills(expanded_skills, threshold=0.6)
+        # Append only new skills not already in the list (case‑insensitive)
+        existing = {s.lower() for s in expanded_skills}
+        for comp in companion_skills:
+            comp_name = comp["skill"]
+            if comp_name.lower() not in existing:
+                expanded_skills.append(comp_name)
+                existing.add(comp_name.lower())
+
+        # 3. Filter out skills already present in candidate's resume
+        skills_to_learn = []
+        for skill in expanded_skills:
+            # Skip if candidate already has this skill and it wasn't explicitly requested
+            if self._is_skill_in_resume(skill, resume_text) and skill not in priority_skills:
+                continue
+            skills_to_learn.append(skill)
+            
+        # Fallback to priority_skills if filtering removed everything
+        if not skills_to_learn:
+            skills_to_learn = priority_skills.copy()
+
+        # Create milestones for each skill in skills_to_learn
         milestones = []
         total_hours = 0
         
-        for idx, skill in enumerate(priority_skills):
+        for idx, skill in enumerate(skills_to_learn):
             milestone = self._create_milestone(
                 skill_name=skill,
                 milestone_id=idx + 1,
                 difficulty=self._estimate_difficulty(skill),
                 resume_text=resume_text,
-                job_description=job_description
+                job_description=job_description,
+                skills_list=skills_to_learn
             )
             milestones.append(milestone)
             total_hours += milestone.estimated_hours
         
-        # Set realistic timelines
+        # Set realistic timelines (topological order is preserved)
         milestones = self._schedule_milestones(milestones, weeks_available)
         
         # Calculate estimated weeks
@@ -673,12 +712,12 @@ class LearningPathGenerator:
             weeks_available
         )
         
-        # Compile resources
-        resources = self._compile_resources(priority_skills)
+        # Compile resources for the learning skills
+        resources = self._compile_resources(skills_to_learn)
         
         learning_path = LearningPath(
-            title=f"Personalized Learning Path - {len(priority_skills)} Priority Skills",
-            description=self._generate_description(priority_skills, estimated_weeks),
+            title=f"Personalized Learning Path - {len(skills_to_learn)} Skills to Learn",
+            description=self._generate_description(skills_to_learn, estimated_weeks),
             total_hours=total_hours,
             estimated_weeks=estimated_weeks,
             milestones=milestones,
@@ -694,7 +733,8 @@ class LearningPathGenerator:
         milestone_id: int,
         difficulty: str,
         resume_text: Optional[str] = None,
-        job_description: Optional[str] = None
+        job_description: Optional[str] = None,
+        skills_list: Optional[List[str]] = None
     ) -> Milestone:
         """
         Create a single learning milestone.
@@ -705,6 +745,7 @@ class LearningPathGenerator:
             difficulty: Difficulty level
             resume_text: Optional candidate resume text
             job_description: Optional job description text
+            skills_list: Optional list of all skills to learn
             
         Returns:
             Milestone object
@@ -730,7 +771,43 @@ class LearningPathGenerator:
         
         # Create detailed milestone description
         description = self._create_milestone_description(skill_name, difficulty)
+
+        # Append Groq research summary for the skill (ONLY if use_llm is explicitly True, normally batched)
+        if self.llm_client:
+            try:
+                research = self.research_skill(skill_name, difficulty)
+                if research.get('summary'):
+                    description += f"\n\n*Research Summary:* {research['summary']}"
+                if research.get('structural_role'):
+                    description += f"\n*Industry Role:* {research['structural_role']}"
+                # Merge Groq-sourced learning assets into resources
+                for asset in research.get('learning_assets', []):
+                    resources.append({
+                        "title": asset.get("title", ""),
+                        "url": asset.get("url", ""),
+                        "type": asset.get("type", "Resource"),
+                        "hours": 10,
+                        "difficulty": difficulty,
+                        "free": True,
+                    })
+            except Exception as e:
+                print(f"Error fetching research summary: {e}")
         
+        # Suggest companion skills based on conditional probabilities
+        try:
+            companions = self.market_cluster.get_companion_skills([skill_name], threshold=0.6)
+            if companions:
+                comp_strs = [f"{c['skill']} (P={c['probability']*100:.0f}%)" for c in companions[:3]]
+                description += f" \n\n*Suggested companion skills in this market cluster: {', '.join(comp_strs)}.*"
+        except Exception as e:
+            print(f"Error appending companion skills: {e}")
+        
+        # Determine prerequisites
+        if skills_list:
+            prereqs = self._determine_prerequisites(skill_name, skills_list)
+        else:
+            prereqs = []
+            
         milestone = Milestone(
             id=milestone_id,
             title=f"Master {skill_name}",
@@ -739,7 +816,7 @@ class LearningPathGenerator:
             resources=resources,
             estimated_hours=estimated_hours,
             difficulty=difficulty,
-            prerequisites=self._determine_prerequisites(skill_name),
+            prerequisites=prereqs,
         )
         
         return milestone
@@ -824,6 +901,68 @@ You must return ONLY a JSON array containing the 3 objects, with no markdown cod
             print(f"Error generating resources via LLM: {e}")
             
         return []
+
+    async def research_skill(
+        self,
+        skill_name: str,
+        difficulty: str = "beginner",
+        resume_text: Optional[str] = None,
+        job_description: Optional[str] = None,
+    ) -> Dict[str, any]:
+        """Use LLM to generate structured research output for a skill.
+
+        Returns JSON with:
+        - summary: 3‑sentence high‑level conceptual summary.
+        - role: description of the tool/skill's structural role in industry.
+        - assets: list of three curated live learning assets (title, url, type, hours, free).
+        """
+        if not self.llm_client:
+            # Fallback static response
+            return {
+                "summary": f"{skill_name} is a key technology used in modern applications.",
+                "role": f"It serves as the core component for building scalable systems.",
+                "assets": [],
+            }
+        # Build prompt for research
+        prompt = f"""
+You are an educational researcher. For the skill **{skill_name}** at difficulty **{difficulty}**, provide the following JSON **without any markdown**:
+
+{{
+  "summary": "<3‑sentence high‑level conceptual summary of the missing tool>",
+  "role": "<exact structural role it plays in industry architectures>",
+  "assets": [
+    {{"title": "<asset 1 title>", "url": "<link>", "type": "<Course|Tutorial|Official Docs>", "hours": <int>, "free": <true|false>}},
+    {{"title": "<asset 2 title>", "url": "<link>", "type": "<...>", "hours": <int>, "free": <true|false>}},
+    {{"title": "<asset 3 title>", "url": "<link>", "type": "<...>", "hours": <int>, "free": <true|false>}}
+  ]
+}}
+
+Make sure the assets are **live**, high‑star GitHub repos, up‑to‑date official docs, or recent tutorials (2023‑2026). Use real URLs.
+"""
+        try:
+            response = self.llm_client.chat.completions.create(
+                model=self.config.model if self.config else "llama-3.1-8b-instant",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.5,
+                max_tokens=800,
+            )
+            content = response.choices[0].message.content.strip()
+            # Strip possible markdown fences
+            if content.startswith("```"):
+                lines = content.split("\n")
+                if lines[0].startswith("```"):
+                    lines = lines[1:]
+                if lines[-1].startswith("```"):
+                    lines = lines[:-1]
+                content = "\n".join(lines).strip()
+            result = json.loads(content)
+            # Validate structure
+            if not isinstance(result, dict) or "summary" not in result or "role" not in result or "assets" not in result:
+                raise ValueError("Invalid research output")
+            return result
+        except Exception as e:
+            print(f"Error in research_skill LLM call: {e}")
+            return {"summary": "", "role": "", "assets": []}
 
     def _get_skill_resources(
         self,
@@ -1042,39 +1181,36 @@ You must return ONLY a JSON array containing the 3 objects, with no markdown cod
         
         return "beginner"
     
-    def _determine_prerequisites(self, skill_name: str) -> List[int]:
+    def _determine_prerequisites(self, skill_name: str, skills_list: Optional[List[str]] = None) -> List[int]:
         """
-        Determine prerequisites for a skill.
+        Determine prerequisites for a skill within the context of the generated milestones.
         
         Args:
             skill_name: Name of the skill
+            skills_list: Optional list of all skills to learn
             
         Returns:
             List of prerequisite milestone IDs
         """
-        # Define skill dependencies - maps skills to their prerequisites
-        prerequisites_map = {
-            "Machine Learning": ["Python", "Statistics", "Mathematics"],
-            "Deep Learning": ["Machine Learning", "Python", "Linear Algebra"],
-            "Computer Vision": ["Deep Learning", "Python", "Image Processing"],
-            "NLP": ["Machine Learning", "Python", "Linguistics"],
-            "TensorFlow": ["Python", "Machine Learning"],
-            "PyTorch": ["Python", "Machine Learning"],
-            "React": ["JavaScript"],
-            "Vue": ["JavaScript"],
-            "Angular": ["TypeScript", "JavaScript"],
-            "Express": ["Node.js", "JavaScript"],
-            "MongoDB": ["Databases", "JavaScript"],
-            "Data Visualization": ["Python", "Data Analysis"],
-            "AWS": ["Cloud Computing", "Basics"],
-            "Kubernetes": ["Docker"],
-            "Microservices": ["REST APIs", "System Design"],
-        }
+        if not skills_list:
+            return []
+            
+        canonical = self.skill_dag.find_canonical_name(skill_name)
+        if not canonical:
+            return []
+            
+        direct_deps = self.skill_dag.get_direct_dependencies(canonical)
+        prereq_ids = []
         
-        # Simplified: return empty list for now
-        # In production, this would map to actual milestone IDs
-        # based on the skill's position in the learning path
-        return []
+        for dep in direct_deps:
+            dep_canonical = self.skill_dag.find_canonical_name(dep) or dep
+            for idx, skill in enumerate(skills_list):
+                skill_canonical = self.skill_dag.find_canonical_name(skill) or skill
+                if skill_canonical.lower() == dep_canonical.lower():
+                    prereq_ids.append(idx + 1)
+                    break
+                    
+        return sorted(list(set(prereq_ids)))
     
     def _compile_resources(self, priority_skills: List[str]) -> Dict[str, List[str]]:
         """
@@ -1463,6 +1599,47 @@ Format as JSON:
             print(f"Error generating personalized resources: {e}")
             return base_resources
     
+    def research_skill(self, skill_name: str, difficulty: str) -> Dict[str, Any]:
+        """
+        Use Groq LLM to research a skill and return structured JSON:
+        - summary: 3-sentence conceptual summary
+        - structural_role: its role in industry architectures
+        - learning_assets: 3 curated, live learning links
+        Falls back to empty dict when no LLM client is available.
+        """
+        if not self.llm_client:
+            return {}
+
+        prompt = f"""You are an educational researcher. For the skill "{skill_name}" at {difficulty} level, return ONLY valid JSON (no markdown fences) with these keys:
+{{
+  "summary": "<3-sentence high-level conceptual summary of {skill_name}>",
+  "structural_role": "<1-2 sentences on the exact structural role {skill_name} plays in modern industry architectures>",
+  "learning_assets": [
+    {{"title": "...", "url": "...", "type": "..."}},
+    {{"title": "...", "url": "...", "type": "..."}},
+    {{"title": "...", "url": "...", "type": "..."}}
+  ]
+}}
+Use only real, currently live URLs from official docs, GitHub, or reputable course platforms. Current year is 2026."""
+
+        try:
+            response = self.llm_client.chat.completions.create(
+                model=self.config.model if self.config else "llama-3.3-70b-versatile",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.4,
+                max_tokens=400,
+            )
+            text = response.choices[0].message.content.strip()
+            # Extract JSON from response
+            json_start = text.find('{')
+            json_end = text.rfind('}') + 1
+            if json_start >= 0 and json_end > json_start:
+                return json.loads(text[json_start:json_end])
+        except Exception as e:
+            print(f"research_skill error for {skill_name}: {e}")
+
+        return {}
+    
     # ============================================================================
     # ADVANCED DYNAMIC FEATURES FOR ADAPTIVE LEARNING PATHS
     # ============================================================================
@@ -1490,7 +1667,7 @@ Format as JSON:
         Returns:
             Fully adaptive LearningPath with personalized milestones
         """
-        # Generate base path
+        # Generate base path without iterative LLM calls to save rate limits
         path = self.generate_path(feedback, priority_skills, weeks_available)
         
         # Adapt based on user profile
@@ -1498,14 +1675,26 @@ Format as JSON:
         path.adaptivity_score = self._calculate_adaptivity_score(path, user_profile)
         path.recommendation_engine_used = "llm" if self.llm_client else "hybrid"
         
-        # Adjust milestones based on user profile
+        # BATCH LLM GENERATION: Fetch all dynamic content in ONE call
+        if self.llm_client:
+            # Get actual skills from the generated milestones to ensure LLM generates data for all of them
+            actual_skills = [m.skills[0] for m in path.milestones if m.skills]
+            if not actual_skills:
+                actual_skills = priority_skills
+                
+            batched_data = self._batch_generate_adaptive_path_llm(
+                actual_skills, user_profile, job_context, resume_context
+            )
+        else:
+            batched_data = {}
+            
+        # Adjust milestones based on batched data & user profile
         adapted_milestones = []
         for milestone in path.milestones:
-            adapted_milestone = self._adapt_milestone_to_profile(
+            adapted_milestone = self._adapt_milestone_with_batch(
                 milestone,
                 user_profile,
-                resume_context,
-                job_context
+                batched_data
             )
             adapted_milestones.append(adapted_milestone)
         
@@ -1518,16 +1707,104 @@ Format as JSON:
         )
         
         # Update path description with dynamic content
-        if self.llm_client:
-            path.description = self.generate_dynamic_learning_path_description(
-                priority_skills,
-                path.estimated_weeks,
-                resume_context,
-                job_context
-            )
+        if self.llm_client and batched_data:
+            path.description = "A fully personalized, adaptive learning roadmap tailored to your experience, preferred learning style, and specific career goals."
         
         return path
-    
+        
+    def _batch_generate_adaptive_path_llm(self, priority_skills: List[str], user_profile: UserProfile, job_context: str, resume_context: str) -> Dict[str, Any]:
+        """One giant LLM call to get research, resources, and projects for ALL skills."""
+        if not self.llm_client:
+            return {}
+            
+        skills_str = ", ".join(priority_skills)
+        prompt = f"""
+You are an expert career advisor and technical educator building a highly customized, adaptive learning path.
+The learner wants to master the following skills: {skills_str}.
+User Profile: Experience: {user_profile.experience_level}, Style: {user_profile.learning_style}, Budget: {user_profile.budget}.
+Job Context: {job_context[:300] if job_context else 'N/A'}
+Resume Context: {resume_context[:300] if resume_context else 'N/A'}
+
+For each skill in the list, provide:
+1. "description": A dynamic, encouraging milestone description (3-4 sentences).
+2. "difficulty": Estimated difficulty level (beginner, intermediate, advanced) based on their experience.
+3. "estimated_hours": Integer hours to complete.
+4. "resources": A list of exactly 3 curated learning resources (courses, docs) formatted with title, url, type, hours, free. Make sure urls are real or high-quality search links.
+5. "projects": A list of 1-2 hands-on projects to practice the skill.
+6. "success_criteria": A list of 2-3 measurable outcomes.
+
+Respond ONLY with a valid JSON object where the keys are the exact skill names.
+Example format:
+{{
+  "Python": {{
+    "title": "Mastering Python",
+    "description": "...",
+    "difficulty": "intermediate",
+    "estimated_hours": 20,
+    "resources": [
+      {{"title": "...", "url": "...", "type": "Course", "hours": 10, "free": true}}
+    ],
+    "projects": [
+      {{"title": "...", "description": "..."}}
+    ],
+    "success_criteria": ["...", "..."]
+  }}
+}}
+"""
+        try:
+            completion = self.llm_client.chat.completions.create(
+                messages=[
+                    {"role": "system", "content": "You are a senior technical educator. Always return valid JSON."},
+                    {"role": "user", "content": prompt}
+                ],
+                model=self.config.model,
+                temperature=0.7,
+                response_format={"type": "json_object"}
+            )
+            response_text = completion.choices[0].message.content
+            return json.loads(response_text)
+        except Exception as e:
+            print(f"Error in batch generation: {e}")
+            return {}
+
+    def _adapt_milestone_with_batch(
+        self,
+        milestone: Milestone,
+        user_profile: UserProfile,
+        batched_data: Dict[str, Any]
+    ) -> Milestone:
+        """Adapt a milestone using the batched LLM data."""
+        adapted = milestone
+        skill_name = adapted.skills[0] if adapted.skills else "General"
+        
+        # Check if we have batched LLM data for this skill
+        data = batched_data.get(skill_name, {})
+        
+        if data:
+            if "title" in data: adapted.title = data["title"]
+            if "description" in data: adapted.description = data["description"]
+            if "difficulty" in data: adapted.difficulty = data["difficulty"]
+            if "estimated_hours" in data: adapted.estimated_hours = int(data["estimated_hours"])
+            if "resources" in data and data["resources"]: adapted.resources = data["resources"]
+            if "projects" in data and data["projects"]: adapted.projects = data["projects"]
+            if "success_criteria" in data and data["success_criteria"]: adapted.success_criteria = data["success_criteria"]
+        else:
+            # Fallback scaling if LLM fails
+            adapted.estimated_hours = int(adapted.estimated_hours * 1.2)
+            
+        # Filter resources by user preferences (if budget strict or preferred types)
+        if user_profile.preferred_resource_types:
+            filtered_resources = [
+                r for r in adapted.resources
+                if r.get("type") in user_profile.preferred_resource_types
+            ]
+            if filtered_resources:
+                adapted.resources = filtered_resources
+                
+        if user_profile.budget == "free":
+            adapted.resources = [r for r in adapted.resources if r.get("free", False)]
+            
+        return adapted    
     def _adapt_milestone_to_profile(
         self,
         milestone: Milestone,
