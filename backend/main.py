@@ -9,7 +9,7 @@ load_dotenv()
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks, Form, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from typing import Optional, List
@@ -627,7 +627,7 @@ async def analyze_resume(
         )
 
 
-async def run_analysis_background(
+def run_analysis_background(
     analysis_id: str,
     resume_path: str,
     job_description: str
@@ -639,6 +639,16 @@ async def run_analysis_background(
     try:
         logger.info(f"Starting analysis {analysis_id}")
         
+        # Parse resume to store text in DB
+        resume_raw_text = ""
+        try:
+            from src.pipeline.pdf_parser import parse_resume
+            parsed = parse_resume(resume_path)
+            resume_raw_text = parsed.text
+            logger.info(f"Parsed raw resume text length: {len(resume_raw_text)}")
+        except Exception as e:
+            logger.error(f"Error parsing resume for raw text: {e}")
+            
         # DEBUG: Log job description before pipeline
         logger.info(f"[DEBUG] Job description before pipeline:")
         logger.info(f"  - Length: {len(job_description)}")
@@ -768,6 +778,7 @@ async def run_analysis_background(
         if analysis:
             analysis.status = "completed"
             analysis.completed_at = datetime.utcnow()
+            analysis.resume_text = resume_raw_text
         
         db.commit()
         logger.info(f"Analysis {analysis_id} completed successfully with dynamic Groq responses")
@@ -847,6 +858,9 @@ async def get_analysis_results(
             "milestones": analysis.learning_path.milestones
         }
     
+    # Include adapted resume if available
+    response["adapted_resume_json"] = analysis.adapted_resume_json
+
     return response
 
 
@@ -1442,10 +1456,129 @@ async def get_stats(
     }
 
 
+@app.post("/api/results/{analysis_id}/generate-match-resume")
+async def generate_match_resume(
+    analysis_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Generate a 100% matched resume JSON against the job description using LLM
+    """
+    analysis = db.query(Analysis).filter(Analysis.id == analysis_id).first()
+    if not analysis:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+        
+    if not analysis.resume_text:
+        raise HTTPException(
+            status_code=400, 
+            detail="Original resume text not found. Cannot generate matched resume."
+        )
+        
+    if not analysis.matching_result:
+        raise HTTPException(
+            status_code=400,
+            detail="Matching results not ready. Please wait for analysis to complete."
+        )
+        
+    # Check if already generated to save LLM tokens/costs
+    if analysis.adapted_resume_json:
+        return {
+            "status": "success",
+            "message": "Resume already adapted previously",
+            "adapted_resume": analysis.adapted_resume_json
+        }
+        
+    # Prepare matching result info
+    matching_data = {
+        "overall_score": analysis.matching_result.overall_score,
+        "matched_skills": [
+            {
+                "resume_skill": m.get("resume_skill", "") if isinstance(m, dict) else getattr(m, "resume_skill", ""),
+                "job_skill": m.get("job_skill", "") if isinstance(m, dict) else getattr(m, "job_skill", ""),
+                "similarity_score": m.get("similarity_score", 0.0) if isinstance(m, dict) else getattr(m, "similarity_score", 0.0)
+            }
+            for m in (analysis.matching_result.matched_skills or [])
+        ],
+        "missing_skills": analysis.matching_result.missing_skills or []
+    }
+    
+    try:
+        from src.pipeline.resume_generator import ResumeGenerator
+        from src.config.config import LLMConfig
+        
+        llm_config = LLMConfig()
+        generator = ResumeGenerator(llm_config)
+        
+        adapted_json = generator.generate_matched_resume_json(
+            resume_text=analysis.resume_text,
+            job_description=analysis.job_description,
+            matching_result=matching_data
+        )
+        
+        analysis.adapted_resume_json = adapted_json
+        db.commit()
+        
+        return {
+            "status": "success",
+            "message": "Resume successfully adapted to 100% match",
+            "adapted_resume": adapted_json
+        }
+    except Exception as e:
+        logger.error(f"Error in generate_match_resume: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to generate matched resume: {str(e)}")
+
+
+@app.get("/api/results/{analysis_id}/download-match-resume")
+async def download_match_resume(
+    analysis_id: str,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    """
+    Generate and download the 100% matched resume as PDF
+    """
+    analysis = db.query(Analysis).filter(Analysis.id == analysis_id).first()
+    if not analysis:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+        
+    if not analysis.adapted_resume_json:
+        raise HTTPException(
+            status_code=400,
+            detail="Resume has not been adapted yet. Please call the generate endpoint first."
+        )
+        
+    try:
+        from src.pipeline.resume_generator import ResumeGenerator
+        import tempfile
+        
+        # Create a temp file path
+        fd, temp_pdf_path = tempfile.mkstemp(suffix=".pdf", prefix="adapted_resume_")
+        os.close(fd)
+        
+        generator = ResumeGenerator()
+        generator.generate_resume_pdf(analysis.adapted_resume_json, temp_pdf_path)
+        
+        # Clean up the file after serving
+        background_tasks.add_task(os.unlink, temp_pdf_path)
+        
+        candidate_name = analysis.adapted_resume_json.get("personal_info", {}).get("name", "Adapted")
+        clean_name = "".join(c for c in candidate_name if c.isalnum() or c in (" ", "_", "-")).strip().replace(" ", "_")
+        filename = f"{clean_name}_100_Match_Resume.pdf"
+        
+        return FileResponse(
+            path=temp_pdf_path,
+            media_type="application/pdf",
+            filename=filename
+        )
+    except Exception as e:
+        logger.error(f"Error downloading matched resume: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to compile PDF resume: {str(e)}")
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
-        app,
+        "main:app",
         host="0.0.0.0",
         port=8000,
         reload=True

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Loader, CheckCircle2, AlertCircle, BarChart3, Zap, Calendar, Network, Lock, Unlock, Award } from "lucide-react";
+import { Loader, CheckCircle2, AlertCircle, BarChart3, Zap, Calendar, Network, Lock, Unlock, Award, Download, Sparkles } from "lucide-react";
 import { apiClient, AnalysisResult, NodeActivation } from "@/lib/api";
 import { useAnalysisStore } from "@/lib/store";
 import UserProfileForm, { UserProfile } from "@/components/UserProfileForm";
@@ -21,6 +21,8 @@ export default function ResultsPage() {
   const [activeTab, setActiveTab] = useState<"overview" | "skills" | "graph" | "path">("overview");
   const [adaptiveLoading, setAdaptiveLoading] = useState(false);
   const [adaptivePath, setAdaptivePath] = useState<any>(null);
+  const [isGeneratingResume, setIsGeneratingResume] = useState(false);
+  const [adaptedResume, setAdaptedResume] = useState<any>(result?.adapted_resume_json || null);
 
   useEffect(() => {
     const fetchResults = async () => {
@@ -29,6 +31,9 @@ export default function ResultsPage() {
         const data = await apiClient.getAnalysisResults(analysisId);
         setResult(data);
         setAnalysisResult(data);
+        if (data.adapted_resume_json) {
+          setAdaptedResume(data.adapted_resume_json);
+        }
 
         if (data.status === "failed") {
           toast.error(data.error || "Analysis failed");
@@ -48,6 +53,39 @@ export default function ResultsPage() {
       fetchResults();
     }
   }, [analysisId, result?.status]);
+
+  const handleGenerateResume = async () => {
+    try {
+      setIsGeneratingResume(true);
+      const data = await apiClient.generateMatchedResume(analysisId);
+      setAdaptedResume(data.adapted_resume);
+      toast.success("Resume optimized to 100% match successfully!");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to generate optimized resume");
+    } finally {
+      setIsGeneratingResume(false);
+    }
+  };
+
+  const handleDownloadResume = async () => {
+    try {
+      const blob = await apiClient.downloadMatchedResume(analysisId);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      
+      const candidateName = adaptedResume?.personal_info?.name || "Matched";
+      const cleanName = candidateName.replace(/[^a-zA-Z0-9]/g, "_");
+      link.setAttribute("download", `${cleanName}_100_Match_Resume.pdf`);
+      
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to download PDF resume");
+    }
+  };
 
   if (isLoading) {
     return (
@@ -189,6 +227,61 @@ export default function ResultsPage() {
           <div className="space-y-6">
             {activeTab === "overview" && feedbackResult && (
               <div className="space-y-6">
+                {/* 100% Match Resume Generator Card */}
+                <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-blue-500/30 rounded-xl p-6 shadow-xl relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl pointer-events-none"></div>
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div className="space-y-2 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 text-xs font-bold bg-blue-500/20 text-blue-400 rounded-full border border-blue-500/30">AI POWERED</span>
+                        <span className="px-2 py-0.5 text-xs font-bold bg-purple-500/20 text-purple-400 rounded-full border border-purple-500/30">100% MATCH</span>
+                      </div>
+                      <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                        <Sparkles className="w-5 h-5 text-yellow-400 animate-pulse" />
+                        Generate 100% Matched Resume
+                      </h3>
+                      <p className="text-slate-300 text-sm leading-relaxed">
+                        Instantly optimize your resume to address all missing skills and tailor experience bullets to this job description. Your original formatting structure is retained, and you will receive a professionally formatted PDF.
+                      </p>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-3 self-start md:self-center shrink-0">
+                      {isGeneratingResume ? (
+                        <button
+                          disabled
+                          className="px-6 py-3 bg-blue-600/50 text-white rounded-lg flex items-center gap-2 cursor-wait"
+                        >
+                          <Loader className="w-4 h-4 animate-spin" />
+                          Optimizing Resume...
+                        </button>
+                      ) : adaptedResume ? (
+                        <>
+                          <button
+                            onClick={handleDownloadResume}
+                            className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] shadow-md shadow-blue-500/20"
+                          >
+                            <Download className="w-4 h-4" />
+                            Download PDF Resume
+                          </button>
+                          <button
+                            onClick={handleGenerateResume}
+                            className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg flex items-center justify-center gap-2 transition"
+                          >
+                            Re-generate
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={handleGenerateResume}
+                          className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] shadow-md shadow-blue-500/20"
+                        >
+                          <Sparkles className="w-4 h-4 text-yellow-300" />
+                          Optimize Resume to 100% Match
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 {/* Gap Analysis */}
                 <div className="bg-slate-800 border border-slate-700 rounded-lg p-6 space-y-3">
                   <h3 className="text-lg font-semibold text-white">Gap Analysis</h3>

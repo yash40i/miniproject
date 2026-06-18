@@ -10,6 +10,7 @@ from src.pipeline.llm_feedback import generate_feedback, LLMFeedbackGenerator, F
 from src.pipeline.learning_path import generate_learning_path, LearningPathGenerator, LearningPath, Milestone
 from src.pipeline.pipeline import run_pipeline, ResumePipeline, AnalysisResult
 from src.pipeline.gap_engine import GapAnalysisEngine, SkillNodeMap, NodeActivation, NodeState
+from src.pipeline.resume_generator import ResumeGenerator
 
 __all__ = [
     'parse_resume',
@@ -37,4 +38,5 @@ __all__ = [
     'SkillNodeMap',
     'NodeActivation',
     'NodeState',
+    'ResumeGenerator',
 ]

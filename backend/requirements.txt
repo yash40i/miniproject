@@ -29,6 +29,7 @@ google-generativeai>=0.3.0  # Google Gemini
 python-dotenv>=1.0.0     # Environment variable management
 pydantic[email]>=2.0.0   # Data validation with email support
 aiofiles>=23.0.0         # Async file handling
+reportlab>=4.0.0         # PDF generation support
 
 # Development & Testing (optional)
 pytest>=7.4.0            # Testing framework

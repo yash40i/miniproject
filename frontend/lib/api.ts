@@ -79,6 +79,7 @@ export interface AnalysisResult {
   feedback?: FeedbackResult;
   learning_path?: LearningPath;
   error?: string;
+  adapted_resume_json?: any;
 }
 
 class APIClient {
@@ -191,6 +192,26 @@ class APIClient {
   async getAnalysisResults(analysisId: string): Promise<AnalysisResult> {
     try {
       const response = await this.client.get(`/api/results/${analysisId}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async generateMatchedResume(analysisId: string): Promise<any> {
+    try {
+      const response = await this.client.post(`/api/results/${analysisId}/generate-match-resume`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async downloadMatchedResume(analysisId: string): Promise<Blob> {
+    try {
+      const response = await this.client.get(`/api/results/${analysisId}/download-match-resume`, {
+        responseType: "blob",
+      });
       return response.data;
     } catch (error) {
       throw this.handleError(error);

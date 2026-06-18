@@ -3,7 +3,7 @@ Database configuration and models for Resume-Insight AI
 Using SQLAlchemy ORM with SQLite for development
 """
 
-from sqlalchemy import create_engine, Column, String, Float, DateTime, Integer, JSON, ForeignKey, Text, Boolean
+from sqlalchemy import create_engine, Column, String, Float, DateTime, Integer, JSON, ForeignKey, Text, Boolean, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
@@ -65,6 +65,8 @@ class Analysis(Base):
     job_description = Column(Text, nullable=False)
     status = Column(String(20), default="processing", index=True)  # processing, completed, failed
     error = Column(Text, nullable=True)
+    resume_text = Column(Text, nullable=True)
+    adapted_resume_json = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
     completed_at = Column(DateTime, nullable=True)
 
@@ -135,8 +137,61 @@ def get_db():
 
 
 def init_db():
-    """Initialize database tables"""
+    """Initialize database tables and run migrations if columns are missing"""
     Base.metadata.create_all(bind=engine)
+    
+    # Run manual migration check for sqlite
+    try:
+        from sqlalchemy import inspect
+        inspector = inspect(engine)
+        columns = [col['name'] for col in inspector.get_columns('analyses')]
+        columns_mr = [col['name'] for col in inspector.get_columns('matching_results')]
+        columns_lp = [col['name'] for col in inspector.get_columns('learning_paths')]
+        columns_users = [col['name'] for col in inspector.get_columns('users')]
+        
+        with engine.begin() as conn:
+            # Enable WAL mode for SQLite to support concurrent reads during writes
+            if "sqlite" in str(engine.url):
+                conn.execute(text("PRAGMA journal_mode=WAL"))
+                print("Database: Enabled WAL mode")
+                
+            if 'resume_text' not in columns:
+                conn.execute(text("ALTER TABLE analyses ADD COLUMN resume_text TEXT"))
+                print("Migration: Added resume_text column to analyses")
+            if 'adapted_resume_json' not in columns:
+                conn.execute(text("ALTER TABLE analyses ADD COLUMN adapted_resume_json TEXT"))
+                print("Migration: Added adapted_resume_json column to analyses")
+            if 'skill_node_map' not in columns_mr:
+                conn.execute(text("ALTER TABLE matching_results ADD COLUMN skill_node_map TEXT"))
+                print("Migration: Added skill_node_map column to matching_results")
+                
+            # Migrations for learning_paths table
+            if 'user_profile' not in columns_lp:
+                conn.execute(text("ALTER TABLE learning_paths ADD COLUMN user_profile TEXT"))
+                print("Migration: Added user_profile column to learning_paths")
+            if 'overall_progress' not in columns_lp:
+                conn.execute(text("ALTER TABLE learning_paths ADD COLUMN overall_progress INTEGER DEFAULT 0"))
+                print("Migration: Added overall_progress column to learning_paths")
+            if 'adaptivity_score' not in columns_lp:
+                conn.execute(text("ALTER TABLE learning_paths ADD COLUMN adaptivity_score FLOAT DEFAULT 0.0"))
+                print("Migration: Added adaptivity_score column to learning_paths")
+            if 'recommendation_engine_used' not in columns_lp:
+                conn.execute(text("ALTER TABLE learning_paths ADD COLUMN recommendation_engine_used VARCHAR(50) DEFAULT 'static'"))
+                print("Migration: Added recommendation_engine_used column to learning_paths")
+                
+            # Migrations for users table
+            if 'current_streak' not in columns_users:
+                conn.execute(text("ALTER TABLE users ADD COLUMN current_streak INTEGER DEFAULT 0"))
+                print("Migration: Added current_streak column to users")
+            if 'longest_streak' not in columns_users:
+                conn.execute(text("ALTER TABLE users ADD COLUMN longest_streak INTEGER DEFAULT 0"))
+                print("Migration: Added longest_streak column to users")
+            if 'last_active_date' not in columns_users:
+                conn.execute(text("ALTER TABLE users ADD COLUMN last_active_date DATETIME"))
+                print("Migration: Added last_active_date column to users")
+    except Exception as e:
+        print(f"Database migration warning: {e}")
+        
     print("Database initialized successfully")
 
 
