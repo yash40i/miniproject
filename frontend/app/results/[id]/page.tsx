@@ -23,11 +23,13 @@ export default function ResultsPage() {
   const [adaptivePath, setAdaptivePath] = useState<any>(null);
   const [isGeneratingResume, setIsGeneratingResume] = useState(false);
   const [adaptedResume, setAdaptedResume] = useState<any>(result?.adapted_resume_json || null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchResults = async () => {
       try {
         setIsLoading(true);
+        setFetchError(null);
         const data = await apiClient.getAnalysisResults(analysisId);
         setResult(data);
         setAnalysisResult(data);
@@ -43,6 +45,7 @@ export default function ResultsPage() {
         }
       } catch (error: any) {
         toast.error(error.message);
+        setFetchError(error.message || "Failed to fetch results");
       } finally {
         setIsLoading(false);
         setLoading(false);
@@ -87,7 +90,9 @@ export default function ResultsPage() {
     }
   };
 
-  if (isLoading) {
+  const showLoading = (isLoading || !result || result.status === "processing") && !fetchError;
+
+  if (showLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center">
         <div className="text-center space-y-4">
