@@ -349,10 +349,10 @@ export default function ResultsPage() {
                 {/* Missing Skills */}
                 <div className="bg-slate-800 border border-slate-700 rounded-lg p-6 space-y-4">
                   <h3 className="text-lg font-semibold text-white">
-                    Skills to Develop ({matchingResult.missing_skills.length})
+                    Skills to Develop ({matchingResult.missing_skills.filter(s => !s.includes(' ') && s.length < 30).length})
                   </h3>
                   <div className="grid md:grid-cols-2 gap-3">
-                    {matchingResult.missing_skills.map((skill, idx) => (
+                    {matchingResult.missing_skills.filter(s => !s.includes(' ') && s.length < 30).map((skill, idx) => (
                       <div key={idx} className="p-3 bg-slate-700 rounded flex items-center gap-2">
                         <span className="text-yellow-400">•</span>
                         <span className="text-slate-200">{skill}</span>

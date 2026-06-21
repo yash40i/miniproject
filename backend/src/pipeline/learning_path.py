@@ -1668,7 +1668,18 @@ Use only real, currently live URLs from official docs, GitHub, or reputable cour
             Fully adaptive LearningPath with personalized milestones
         """
         # Generate base path without iterative LLM calls to save rate limits
-        path = self.generate_path(feedback, priority_skills, weeks_available)
+        temp_client = self.llm_client
+        self.llm_client = None
+        try:
+            path = self.generate_path(
+                feedback, 
+                priority_skills, 
+                weeks_available, 
+                resume_text=resume_context, 
+                job_description=job_context
+            )
+        finally:
+            self.llm_client = temp_client
         
         # Adapt based on user profile
         path.user_profile = user_profile

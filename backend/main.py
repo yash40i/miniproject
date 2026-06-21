@@ -1073,7 +1073,8 @@ async def generate_adaptive_learning_path(
         try:
             llm_config = LLMConfig()
             lp_generator = LearningPathGenerator(config=llm_config)
-        except:
+        except Exception as e:
+            logger.error(f"Failed to initialize LLM generator: {str(e)}")
             lp_generator = LearningPathGenerator()
         
         # Convert user profile request to UserProfile dataclass
@@ -1086,14 +1087,27 @@ async def generate_adaptive_learning_path(
             budget=request.user_profile.budget
         )
         
-        # Generate adaptive path
-        adaptive_path = lp_generator.generate_adaptive_path(
-            feedback=feedback,  # This needs to be converted from DB
+        # Convert ORM Feedback to a plain object for the generator
+        from types import SimpleNamespace
+        feedback_obj = SimpleNamespace(
             priority_skills=feedback.priority_skills,
-            user_profile=user_profile,
-            weeks_available=12,
-            job_context=analysis.job_description
+            gap_analysis=feedback.gap_analysis,
+            recommendations=feedback.recommendations,
+            next_steps=feedback.next_steps
         )
+
+        # Generate adaptive path
+        try:
+            adaptive_path = lp_generator.generate_adaptive_path(
+                feedback=feedback_obj,
+                priority_skills=feedback_obj.priority_skills,
+                user_profile=user_profile,
+                weeks_available=12,
+                job_context=analysis.job_description
+            )
+        except Exception as e:
+            logger.error(f"LLM generation failed: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"LLM path generation failed: {str(e)}")
         
         return {
             "analysis_id": request.analysis_id,
